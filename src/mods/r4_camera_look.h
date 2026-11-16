@@ -113,7 +113,7 @@ static inline void r4_camera_look_step(R4CameraLookState *state,
                                        float dt_seconds) {
     if (dt_seconds < 0.0f) dt_seconds = 0.0f;
     if (dt_seconds > 0.25f) dt_seconds = 0.25f;
-    const float alpha = 1.0f - expf(-dt_seconds / 0.12f);
+    const float alpha = 1.0f - expf(-dt_seconds / 0.025f);
     state->yaw_radians +=
         r4_camera_look_yaw_delta(state->yaw_radians, target_yaw) * alpha;
     state->yaw_radians = r4_camera_look_wrap_yaw(state->yaw_radians);

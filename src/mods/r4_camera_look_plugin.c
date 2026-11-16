@@ -1,4 +1,5 @@
 #include "psx_rewind.h"
+#include "psx_cycle_freeze.h"
 /* Local right-stick camera look for R4's single-player race cameras. */
 #include "mod_plugins.h"
 #include "cpu_state.h"
@@ -141,7 +142,10 @@ static void r4_camera_look_vblank(void) {
 static void r4_camera_look_build(CPUState *cpu, uint32_t address) {
     (void)cpu;
     (void)address;
-    if (!s_enabled || !r4_camera_look_live()) return;
+    /* Temporal redraws interpolate the already-adjusted camera captured after
+     * the native draw. Applying look again doubles its angle and mutates the
+     * restore bookkeeping outside the render transaction. */
+    if (g_psx_render_pass_active || !s_enabled || !r4_camera_look_live()) return;
     if (s_restore_pending) {
         /* Fail-safe for an unexpected camera call sequence. */
         r4_camera_look_restore_inputs();

@@ -245,6 +245,13 @@ if(R4_BUILD_TESTS AND BUILD_TESTING)
             target_link_libraries(r4-camera-look-tests PRIVATE m)
         endif()
         add_test(NAME r4_camera_look_helpers COMMAND r4-camera-look-tests)
+        add_executable(r4-camera-look-plugin-tests tests/test_r4_camera_look_plugin.c)
+        target_include_directories(r4-camera-look-plugin-tests PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/mods" "${PSXRECOMP_ROOT}/runtime/include")
+        if(NOT MSVC)
+            target_link_libraries(r4-camera-look-plugin-tests PRIVATE m)
+        endif()
+        add_test(NAME r4_camera_look_redraw COMMAND r4-camera-look-plugin-tests)
     endif()
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_r4_link_netplay.c")
         add_executable(r4-link-netplay-tests

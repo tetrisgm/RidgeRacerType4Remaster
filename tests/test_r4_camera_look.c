@@ -128,6 +128,13 @@ int main(void) {
     target(255, 255, &yaw, &pitch);
     assert(yaw > PI * 0.5f && yaw < PI);
 
+    /* A full side/rear command reaches 95% in five frames (83 ms), then
+     * holds its direction until released. */
+    R4CameraLookState quick = {0};
+    for (int i = 0; i < 5; ++i)
+        r4_camera_look_step(&quick, PI, 0.0f, 1.0f / 60.0f);
+    assert(fabsf(r4_camera_look_yaw_delta(quick.yaw_radians, PI)) < PI * .05f);
+
     /* Exponential VBlank smoothing follows the same curve at both update
      * rates and returns to neutral after stick release. */
     R4CameraLookState at30 = {0.0f, 0.0f};
@@ -152,7 +159,7 @@ int main(void) {
     R4CameraLookState rear = {0.0f, 0.0f};
     for (int i = 0; i < 120; ++i)
         r4_camera_look_step(&rear, PI, 0.0f, 1.0f / 60.0f);
-    assert(rear.yaw_radians > 3.0f);
+    assert(fabsf(rear.yaw_radians) > 3.0f);
     for (int i = 0; i < 8; ++i)
         r4_camera_look_step(&rear, -PI + 0.01f, 0.0f, 1.0f / 60.0f);
     assert(fabsf(rear.yaw_radians) > 3.0f);

@@ -1,3 +1,12 @@
+## 2026-11-16 — 5612ecec: SDL controller verification
+
+Adds opt-in debug-server controller status and a virtual SDL gamepad, including
+explicit test-seat selection and physical-seat restoration. Native PC checks
+exercise device polling, Y hold/release and Back through the controller path.
+No production rewind/renderer policy changes. Supported regeneration reuses all
+7,459 audited variants without generated-C changes. UI remains `a786d20`.
+Evidence: `analysis/controller-fix-20261116/virtual-pc.json`.
+
 2026-11-12 test-only engine `a6f0b4b5`: hidden presentation fixtures explicitly
 
 ## 2026-11-12 — d81b3919: restore rewind rendering pipeline

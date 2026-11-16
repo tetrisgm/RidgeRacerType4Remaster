@@ -1,5 +1,29 @@
 # Handoff
 
+## Current: 0.2.3 controller/camera follow-up
+
+Camera look now skips duplicate adjustment during temporal redraw and reaches
+directional targets faster. The regression test fails on the old hook. All 45
+Mac tests passed. Native PC SDL virtual-pad Y hold/release and Back menu passed;
+held side/rear angles stayed constant across eight samples each. The owner
+confirmed the physical USB Steam Controller test “worked great.” These tests
+used a direct launch; final Steam-launch verification remains pending.
+
+PC 4K route: 59.76 ticks/s over 120 seconds, zero dispatch misses/render-pass
+faults, three releases 32–39 ms. Evidence: `analysis/controller-fix-20261116/`
+(`pc-route/normal.json`, `virtual-pc.json`). Tests are muted. Original Y failure
+was not reproduced in the clean tests; no speculative rewind policy change.
+
+Final Mac/Windows version-stamped builds pass; Mac CTest is 45/45.
+The separate Mac RAM/pixel check passed (zero differing words, 13 exact image
+comparisons), receipt `analysis/controller-023-mac-state/result.json`. Combined
+screenshot+RAM diagnostics exceeded the 128-tick RAM reference buffer; the
+harness now rejects that combination. Final performance/visual qualification
+and 0.2.3 packaging remain pending.
+Installed desktop Steam entries still point to 0.2.2. Temporary PC test folder
+and task: `R4ControllerCheck20261116`; remove after finishing verification.
+Repo origin now follows `tetrisgm/RidgeRacerType4Remaster`.
+
 ## Release 0.2.2 — complete locally
 
 - Mac: `dist/macos/R4-0.2.2-macOS-arm64.zip`, Developer-ID signed,

@@ -54,6 +54,8 @@ def main():
     env['SDL_AUDIODRIVER'] = 'dummy'
     # Shipping builds keep TCP control opt-in, independently of tracing.
     env['PSX_DEBUG_SERVER'] = '1'
+    if not args.menu_script:
+        env['R4L_BOOT_MENU_DONE'] = '1'
     # Cocoa may throttle a hidden window's display link to one swap per second.
     # Script waits count rendered frames; isolated automation must not use VSync.
     env['PSX_VSYNC'] = '0'

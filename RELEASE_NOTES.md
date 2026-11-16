@@ -1,3 +1,20 @@
+# Ridge Racer Type 4 Recompiled — v0.2.3 candidate
+
+Right-stick camera look responds faster and holds its angle consistently.
+Intermediate redraws no longer apply the look offset twice or disturb the
+camera restore state. The Select/Back menu and existing rewind/controller
+bindings remain intact.
+
+Native PC virtual-controller checks cover Y hold/release, directional look and
+Back. The owner confirmed the USB Steam Controller test worked well. A muted
+4K route averaged 59.76 game ticks/s over two minutes, with zero dispatch misses
+and three internal rewind releases of 32–39 ms. Mac regression coverage is now
+45 tests, including the duplicate camera adjustment regression. These are finite
+checks, not a guarantee of locked 60 FPS on every course. Final 0.2.3 packaging
+and Steam-launch qualification are pending; installed releases remain 0.2.2.
+
+---
+
 # Ridge Racer Type 4 Recompiled — v0.2.2
 
 Rewind release now restores the rendering work already issued at the selected

@@ -54,6 +54,8 @@ def main():
     parser.add_argument('--full-cost', action='store_true',
                         help='disable redraw shedding to measure full workload capacity')
     args = parser.parse_args()
+    if args.verify_state and args.capture_rewind:
+        parser.error('run RAM verification separately from screenshot capture: captures can rewind beyond the 128-tick diagnostic RAM history')
     if args.app and args.crossover_bottle:
         parser.error('--app and --crossover-bottle are mutually exclusive')
     executable_name = 'r4-runtime.exe' if args.crossover_bottle else 'r4-runtime'
