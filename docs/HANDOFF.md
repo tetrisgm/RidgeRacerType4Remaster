@@ -19,7 +19,17 @@ The separate Mac RAM/pixel check passed (zero differing words, 13 exact image
 comparisons), receipt `analysis/controller-023-mac-state/result.json`. Combined
 screenshot+RAM diagnostics exceeded the 128-tick RAM reference buffer; the
 harness now rejects that combination. Final performance/visual qualification
-and 0.2.3 packaging remain pending.
+and final Mac packaging remain pending. Windows candidate is staged and
+checksummed at `dist/windows/R4-0.2.3-Windows-x64.zip`; it is not yet
+installed or qualified through Steam. Code is committed/pushed: root
+`6aed8acb`, engine `5612ecec`. Final hidden smoke passed (7,196,569 static
+hits, zero misses): `analysis/controller-023-smoke/native-overlay-check.json`.
+Mac release timing remains unqualified: 48.58 ticks/s during overlapping
+Windows linking, then 51.52 ticks/s in a 60-second repeat after our build ended.
+The repeat rendered all 1,549 intermediates; internal rewind release was 68.6 ms.
+Other MediaMedia/Go jobs were using substantial CPU; do not stop them. This
+does not establish the cause or meet 4K/60. Evidence:
+`analysis/controller-023-mac-performance-clean/result.json`.
 Installed desktop Steam entries still point to 0.2.2. Temporary PC test folder
 and task: `R4ControllerCheck20261116`; remove after finishing verification.
 Repo origin now follows `tetrisgm/RidgeRacerType4Remaster`.
