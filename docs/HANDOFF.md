@@ -30,7 +30,23 @@ The repeat rendered all 1,549 intermediates; internal rewind release was 68.6 ms
 Other MediaMedia/Go jobs were using substantial CPU; do not stop them. This
 does not establish the cause or meet 4K/60. Evidence:
 `analysis/controller-023-mac-performance-clean/result.json`.
-Installed desktop Steam entries still point to 0.2.2. Temporary PC test folder
+PC desktop Steam entry still points to 0.2.2. Mac owner now wants the native
+app directly (no Mac desktop Steam shortcut). `~/Desktop/R4.app` links to
+`~/Applications/R4-0.2.3-Playtest/R4.app`, Developer-ID signed local playtest,
+not a qualified/notarized final release. Previous Steam shortcut is preserved
+inside that playtest install folder. Add-to-Steam product support remains.
+
+Native Mac app opened in a race, muted, 2160-line rendering, Bluetooth DualSense
+assigned to P1 (instance 4), rewind enabled. Save-grid loading passed after
+repairing bundle root detection: player data lacked the packaged license marker,
+so an ancestor home `.gitignore` anchored saves/settings incorrectly.
+Engine `d4c60bf6` links `licenses` into player data; bundle-storage regression
+test passes. Current installed binary remains the prior qualified code candidate,
+with its player-data license link repaired; rebuilding that engine fix into
+release binaries is pending. Native saves/settings now resolve inside
+`~/Library/Application Support/net.ramine.r4recomp/`; fixture copies are local
+there. No existing player data was overwritten (directory did not exist).
+User has the race for Triangle/right-stick/Create physical-controller testing. Temporary PC test folder
 and task: `R4ControllerCheck20261116`; remove after finishing verification.
 Repo origin now follows `tetrisgm/RidgeRacerType4Remaster`.
 

@@ -1,3 +1,11 @@
+## 2026-11-16 — d4c60bf6: native Mac player-data root
+
+Links packaged licenses into player data to retain the existing packaged-root
+marker during configuration discovery. Prevents an ancestor home `.gitignore`
+from redirecting saves/settings. Bundle-storage fixture verifies the marker and
+app relocation. Native DualSense playtest loads the race with the repaired data
+link; final binaries still need rebuilding. Supported regeneration is unchanged.
+
 ## 2026-11-16 — 5612ecec: SDL controller verification
 
 Adds opt-in debug-server controller status and a virtual SDL gamepad, including
