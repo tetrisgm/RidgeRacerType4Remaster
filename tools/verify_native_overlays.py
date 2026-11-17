@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--disc', type=Path, default=ROOT / 'disc/R4 - Ridge Racer Type 4 (USA).cue')
     parser.add_argument('--port', type=int, default=4798)
     parser.add_argument('--menu-script', type=Path, help='exercise the custom boot menu before smoke')
+    parser.add_argument('--sound', action='store_true', help='enable the normal audio device during the check')
     parser.add_argument('--visible', action='store_true', help='show the isolated verification window')
     parser.add_argument('--present-thread', action='store_true', help='also qualify the presentation worker')
     parser.add_argument('--race-hud', action='store_true', help='qualify the optional modern race HUD')
@@ -53,7 +54,8 @@ def main():
     env = {k: v for k, v in os.environ.items() if not k.startswith(('PSX_', 'R4L_'))}
     if args.app:
         env['PSX_BUNDLE_DATA_DIR'] = str(stage)
-    env['SDL_AUDIODRIVER'] = 'dummy'
+    if not args.sound:
+        env['SDL_AUDIODRIVER'] = 'dummy'
     # Shipping builds keep TCP control opt-in, independently of tracing.
     env['PSX_DEBUG_SERVER'] = '1'
     if not args.menu_script:

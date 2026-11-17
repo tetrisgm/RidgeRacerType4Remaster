@@ -132,6 +132,8 @@ void func_8003F150(CPUState* cpu)
         }
     }
     debug_server_log_call_entry(0x8003F150u);
+    if (psx_mod_function_entry(cpu, 0x8003F150u)) return;  /* trusted opt-in game-mod hook */
+    if (psx_mod_try_function_replacement(cpu, 0x8003F150u)) return;
     /* Address: 0x8003F150, Size: 3224 bytes, Blocks: 118 */
 
 block_8003F150:
@@ -9194,8 +9196,11 @@ block_8003FDAC:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x8003FDACu);
 #endif
-    { uint32_t _pgxa = cpu->gpr[29] + 48; cpu->gpr[8] = psx_cyc_load_word(cpu, cpu->gpr[29] + 48, 8, 0x20000000u);
+psx_mod_instruction(cpu, 0x8003FDACu, 0x8FA80030u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x8003FDACu, 0x8FA80030u, (uint32_t)(cpu->gpr[29] + 48));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[8] = psx_cyc_load_word(cpu, _mod_ea, 8, 0x20000000u);
     PGXP_LOAD(0x8FA80030u, _pgxa, cpu->gpr[8]); }  /* 0x8003FDAC: 0x8FA80030 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x8003FDACu);
 #endif
@@ -18116,8 +18121,11 @@ block_8003FDAC:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x8003FDACu);
 #endif
-    { uint32_t _pgxa = cpu->gpr[29] + 48; cpu->gpr[8] = psx_cyc_load_word(cpu, cpu->gpr[29] + 48, 8, 0x20000000u);
+psx_mod_instruction(cpu, 0x8003FDACu, 0x8FA80030u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x8003FDACu, 0x8FA80030u, (uint32_t)(cpu->gpr[29] + 48));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[8] = psx_cyc_load_word(cpu, _mod_ea, 8, 0x20000000u);
     PGXP_LOAD(0x8FA80030u, _pgxa, cpu->gpr[8]); }  /* 0x8003FDAC: 0x8FA80030 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x8003FDACu);
 #endif

@@ -93,6 +93,28 @@ void r4_menu_frame(CPUState* cpu, uint32_t) {
     r4_menu_actions.store(0);
     r4_menu_result.store(1);
 }
+// Keep each native menu item's animation/state updates, but unlink its
+// drawing commands. The title backdrop uses the same frame and stays visible.
+uint32_t r4_menu_saved_ot[0x2C0];
+uint32_t r4_menu_saved_ot_base;
+void r4_menu_draw_begin(CPUState* cpu, uint32_t) {
+    r4_menu_saved_ot_base = 0;
+    if (!cpu || g_psx_render_pass_active || psx_netplay_active() ||
+        cpu->gpr[31] != 0x8002F5B4u ||
+        r4_frame_handler(psx_mod_read_word, psx_mod_read_half) != 0x8002F110u) return;
+    const uint32_t base = psx_mod_read_word(0x800ACDCCu) + 0x70u;
+    if ((base & 0xFFE00003u) != 0x80000000u) return;
+    r4_menu_saved_ot_base = base;
+    for (unsigned i = 0; i < 0x2C0; ++i) r4_menu_saved_ot[i] = psx_mod_read_word(base + i * 4u);
+}
+void r4_menu_draw_end(CPUState*, uint32_t) {
+    if (!r4_menu_saved_ot_base) return;
+    for (unsigned i = 0; i < 0x2C0; ++i)
+        psx_mod_write_word(r4_menu_saved_ot_base + i * 4u, r4_menu_saved_ot[i]);
+    r4_menu_saved_ot_base = 0;
+}
+const int r4_menu_draw_hook = psx_game_register_function_entry(0x8003F150u, r4_menu_draw_begin);
+const int r4_menu_draw_end_hook = psx_game_register_instruction(0x8003FDACu, 0x8FA80030u, r4_menu_draw_end);
 const int r4_menu_select_hook = psx_game_register_function_entry(0x8002F5E8u, r4_menu_select);
 const int r4_menu_hook = psx_game_register_function_entry(0x80093418u, r4_menu_frame);
 }

@@ -49,10 +49,11 @@ const TitleGameMode kGameModes[] = {
 };
 
 const TitleNotice kIntroduction[] = {
-    {"Drive", "Modern controls: left stick steers; RT / R2 accelerates; LT / L2 brakes. X / Square shifts down; B / Circle shifts up.", nullptr},
-    {"Look and rewind", "Right stick looks around; RB / R1 changes the driving view. Hold Y / Triangle to rewind, then release to drive from that moment. Rewind is unavailable in multiplayer.", nullptr},
-    {"Keyboard and Classic", "Keyboard and controller work together. View or change bindings in Controls. Classic uses the original layout and Select + Y / Triangle for rewind.", nullptr},
-    {"Race together", "Online races support up to four players, each with their own full-screen view. Local VS Battle uses shared split-screen.", nullptr},
+    {"Modern Controls", "Analog steering. RT / R2 accelerates; LT / L2 brakes. X / Square shifts down; B / Circle shifts up.", nullptr},
+    {"Modern Camera", "Use the right stick to look around. RB / R1 changes the driving view.", nullptr},
+    {"Rewind", "Hold Y / Triangle to rewind, then release to drive from that moment. Rewind is unavailable in multiplayer.", nullptr},
+    {"Four Player Split Screen", "Local split screen with up to four players.", nullptr},
+    {"Online Multiplayer", "Race online with up to four players. Host or join a room in Online Multiplayer; each player has their own full-screen view.", nullptr},
     {"Visuals", "Higher-resolution rendering, corrected geometry and widescreen support.", nullptr},
 };
 
@@ -198,7 +199,7 @@ void draw_hero(void* dl_v, float x0, float y0, float x1, float y1, double t) {
 
 const TitleLayer kR4 = {
     "r4",
-    "R4: Ridge Racer Type 4",
+    "Ridge Racer Type 4 Remastered",
     "Native PC recompilation · " R4_DISC_SERIAL,
     R4_DISC_SERIAL,
     {255, 92, 54},

@@ -111,7 +111,7 @@ def check_menu(output, port, *, input_settle_seconds=.25):
     back(); state(1)
     click(190, 211)  # Save State
     shot('save-slots.png')
-    click(650, 235)  # first slot
+    call('host_button', name='a')  # page entry selects the first slot
     state(1)
     saved = until(lambda: (s if s.get('last_ok') == 1 and s.get('last_op') == 'save' else None)
                   if (s := call('savestate_status')) else None, 20)
@@ -125,7 +125,7 @@ def check_menu(output, port, *, input_settle_seconds=.25):
     click(190, 259)  # Load State
     time.sleep(1.2)  # slot metadata refresh
     shot('load-slots.png')
-    click(650, 235)
+    call('host_button', name='a')  # load without moving away from the entry selection
     state(0)
     loaded = until(lambda: (s if s.get('last_ok') == 1 and s.get('last_op') == 'load' else None)
                    if (s := call('savestate_status')) else None, 20)

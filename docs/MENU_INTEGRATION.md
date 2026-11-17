@@ -14,11 +14,19 @@ Menu code never invokes guest code from the render thread.
   maximum pause item at 0x8009F8B8 determines availability: Grand Prix offers
   Retire only. Confirmations keep Cancel first. Start/keyboard Start intercept
   only a supported offline race; Select/Back remains available.
+- Activating a submenu moves visible keyboard/controller focus into its first
+  available control, including page changes with the shoulder buttons. Back
+  returns to the parent entry. Options returns to Options on the main menu;
+  local-player selection returns to Local multiplayer.
 - Save waits for the safe snapshot boundary then stays paused. Load closes the
-  menu only after success. Cancelling a child page returns to its parent.
+  menu only after success. Snapshot pages expose only Back in the rail; Load
+  focuses the first occupied slot (or Back when empty), never Save State.
 - Disc browsing is embedded, supports UTF-8 paths, and requires Continue.
   First boot presents controls/rewind, multiplayer and one visual-improvements
-  bullet. Its acknowledgement lives with player preferences, not in the app.
+  bullet in a compact two-column layout. Start/A/Enter continues into the
+  original introduction; the guest is paused until first-run acknowledgement.
+  Its acknowledgement lives with player preferences, not in the app. Later
+  launches skip onboarding; How to play can reopen the explanation.
 
 ## Verification
 

@@ -600,3 +600,10 @@ Resume clicks previously survived closed frames and immediately closed the next
 Start opening. The old build fails the direct reproduction on its first cycle;
 the corrected build passes 30 cycles. 19 launcher and 45 runtime tests pass;
 `tools/check_ingame_menu.py` includes the regression.
+
+Launcher `27bbe4f` makes page entry focus its first available control, with a
+visible navigation cursor so mouse-to-controller confirmation works immediately.
+Back restores the parent entry; snapshot pages cannot select Save from Load.
+It also compacts first-run help, pauses boot until Start/A/Enter and keeps the
+native frontend running behind the custom main menu. Launcher tests cover
+Graphics, Controls, Mods, Settings, snapshot entry/confirmation and Back.
