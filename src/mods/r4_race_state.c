@@ -212,59 +212,11 @@ static int camera_command(const char *args, char *reply, int cap)
     return 0;
 }
 
-/* ------------------------------------------------------------------ stabilized camera
- * The game camera is integer: eye in world units, angles in 4096ths of a turn.
- * Crawling on the grid it follows the vibrating body and swings by one angle
- * step from frame to frame: 0.09 degrees, half a pixel at 240 lines but
- * 3 pixels at 1680, so the whole image shakes. Hysteresis of one step
- * (angles) and a few units (eye, 5 cm): a one-step back-and-forth is ignored,
- * a real move passes with this constant (invisible) lag; a jump (camera
- * change) passes as is. Visual only: the filtered camera is written to the
- * scratchpad on entry to the view build, before the game derives the GTE
- * matrix from it. PSX_R4_CAMERA_STABLE=0 turns it off. */
-#define STABLE_EYE 6
-#define STABLE_ANGLE 1
-#define CUT_EYE 1500
-#define CUT_ANGLE 128
-#define STABLE_VIEWS 8                         /* game view indices (6 in a race) */
-
-static int32_t s_stable[STABLE_VIEWS][6];    /* eye x y z, pitch, yaw, roll (previous output) */
-static int s_stable_ok[STABLE_VIEWS];
-
-static int32_t follow(int32_t prev, int32_t diff, int32_t in, int32_t threshold, int32_t cut)
-{
-    if (diff > cut || diff < -cut) return in;
-    if (diff <= threshold && diff >= -threshold) return prev;
-    return diff > 0 ? in - threshold : in + threshold;
-}
-
-static void stabilize_camera(int view)
-{
-    static int read_env, enabled = 1;
-    if (!read_env) { read_env = 1; const char *e = getenv("PSX_R4_CAMERA_STABLE"); enabled = !(e && e[0] == '0'); }
-    if (!enabled || view < 0 || view >= STABLE_VIEWS || atomic_load(&s_lab_mode) != 0) return;
-    static const uint32_t addr[6] = {CAM_EYE, CAM_EYE + 4u, CAM_EYE + 8u, CAM_PITCH, CAM_YAW, CAM_ROLL};
-    int32_t in[6], *p = s_stable[view];
-    for (int i = 0; i < 6; ++i) in[i] = r32(addr[i]);
-    if (!s_stable_ok[view]) { memcpy(p, in, sizeof in); s_stable_ok[view] = 1; return; }
-    for (int i = 0; i < 6; ++i) {
-        int32_t out;
-        if (i < 3) out = follow(p[i], in[i] - p[i], in[i], STABLE_EYE, CUT_EYE);
-        else {
-            out = follow(p[i], angle_diff(p[i], in[i]), in[i], STABLE_ANGLE, CUT_ANGLE);
-            if ((uint32_t)in[i] < 0x1000u) out &= 0xFFF;   /* angle kept within one turn: keep it there */
-        }
-        if (out != in[i]) psx_mod_write_word(addr[i], (uint32_t)out);
-        p[i] = out;
-    }
-}
-
 static void view_build(struct CPUState *cpu, uint32_t address)
 {
     (void)address;
     psx_mod_counter_add("r4.race.view", 1);
     { const int v = r16(CURRENT_VIEW); if (v < 0 || v >= R4_RACE_VIEWS || v == 0) lab_camera(); }
-    stabilize_camera(r16(CURRENT_VIEW));
     if (atomic_flag_test_and_set_explicit(&s_state_lock, memory_order_acquire)) return;
     const unsigned cur = atomic_load_explicit(&s_current, memory_order_relaxed);
     const R4RaceState *prev = &s_states[cur];
@@ -360,8 +312,6 @@ int r4_race_project(const R4RaceState *s, int view, float wx, float wy, float wz
 
 PSX_MOD_CONSTRUCTOR(r4_register_race_state)
 {
-    (void)psx_rewind_register_region(s_stable,sizeof s_stable);
-    (void)psx_rewind_register_region(s_stable_ok,sizeof s_stable_ok);
     (void)psx_mod_register_function_entry_plugin(PLUGIN_ID, VIEW_BUILD, view_build);
     (void)psx_mod_register_command("r4.camera", camera_command);
 }

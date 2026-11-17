@@ -137,8 +137,7 @@ static void r4_camera_look_vblank(void) {
  * scratchpad inputs. The car draw starts at 0x8002E554 and its GTE work runs
  * below that entry, so restoring the eye there discards the orbit translation
  * before the player car is transformed. Keep the override through the draw;
- * restore it at the next camera-state update entry, before the guest rewrites
- * the per-frame eye. */
+ * restore it at the next main-loop head, before the guest updates its camera. */
 static void r4_camera_look_build(CPUState *cpu, uint32_t address) {
     (void)cpu;
     (void)address;
@@ -183,9 +182,9 @@ static void r4_camera_look_build(CPUState *cpu, uint32_t address) {
 }
 
 static void r4_camera_look_restore(CPUState *cpu, uint32_t address) {
-    (void)cpu;
     (void)address;
-    if (!s_restore_pending) return;
+    if (g_psx_render_pass_active || !cpu ||
+        cpu->gpr[31] != R4_CAMERA_LOOK_LOOP_HEAD_RETURN || !s_restore_pending) return;
     r4_camera_look_restore_inputs();
 }
 

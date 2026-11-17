@@ -25,10 +25,11 @@ enum {
     R4_CAMERA_LOOK_ANGLE_UNITS = 4096,
 };
 
-/* The camera-state updater rewrites the scratch eye before each view build.
- * Restore the prior frame's temporary eye at this entry, before that update
- * runs; restoring at the car-draw entry is too early for its GTE transform. */
-#define R4_CAMERA_LOOK_INPUT_RESTORE_ENTRY 0x800738C4u
+/* Restore at the main-loop head, before the race handler updates its camera.
+ * 0x800738C4 is object update, after the chase update at 0x800340EC; restoring
+ * there lets the chase damper consume our previous presentation-only offset. */
+#define R4_CAMERA_LOOK_INPUT_RESTORE_ENTRY 0x80093418u
+#define R4_CAMERA_LOOK_LOOP_HEAD_RETURN 0x8001E764u
 
 #define R4_CAMERA_LOOK_DEFAULT_DEADZONE 0.18f
 #define R4_CAMERA_LOOK_PI 3.14159265f

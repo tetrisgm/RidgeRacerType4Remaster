@@ -1,0 +1,106 @@
+# Handoff
+
+## Current: 0.2.3 controller/camera follow-up
+
+Camera look now skips duplicate adjustment during temporal redraw and reaches
+directional targets faster. The regression test fails on the old hook. All 45
+Mac tests passed. Native PC SDL virtual-pad Y hold/release and Back menu passed;
+held side/rear angles stayed constant across eight samples each. The owner
+confirmed the physical USB Steam Controller test “worked great.” These tests
+used a direct launch; final Steam-launch verification remains pending.
+
+PC 4K route: 59.76 ticks/s over 120 seconds, zero dispatch misses/render-pass
+faults, three releases 32–39 ms. Evidence: `analysis/controller-fix-20261116/`
+(`pc-route/normal.json`, `virtual-pc.json`). Tests are muted. Original Y failure
+was not reproduced in the clean tests; no speculative rewind policy change.
+
+Final Mac/Windows version-stamped builds pass; Mac CTest is 45/45.
+The separate Mac RAM/pixel check passed (zero differing words, 13 exact image
+comparisons), receipt `analysis/controller-023-mac-state/result.json`. Combined
+screenshot+RAM diagnostics exceeded the 128-tick RAM reference buffer; the
+harness now rejects that combination. Final performance/visual qualification
+and final Mac packaging remain pending. Windows candidate is staged and
+checksummed at `dist/windows/R4-0.2.3-Windows-x64.zip`; it is not yet
+installed or qualified through Steam. Code is committed/pushed: root
+`6aed8acb`, engine `5612ecec`. Final hidden smoke passed (7,196,569 static
+hits, zero misses): `analysis/controller-023-smoke/native-overlay-check.json`.
+Mac release timing remains unqualified: 48.58 ticks/s during overlapping
+Windows linking, then 51.52 ticks/s in a 60-second repeat after our build ended.
+The repeat rendered all 1,549 intermediates; internal rewind release was 68.6 ms.
+Other MediaMedia/Go jobs were using substantial CPU; do not stop them. This
+does not establish the cause or meet 4K/60. Evidence:
+`analysis/controller-023-mac-performance-clean/result.json`.
+PC desktop Steam entry still points to 0.2.2. Mac owner now wants the native
+app directly (no Mac desktop Steam shortcut). `~/Desktop/R4.app` links to
+`~/Applications/R4-0.2.3-Playtest/R4.app`, Developer-ID signed local playtest,
+not a qualified/notarized final release. Previous Steam shortcut is preserved
+inside that playtest install folder. Add-to-Steam product support remains.
+
+Native Mac app opened in a race, muted, 2160-line rendering, Bluetooth DualSense
+assigned to P1 (instance 4), rewind enabled. Save-grid loading passed after
+repairing bundle root detection: player data lacked the packaged license marker,
+so an ancestor home `.gitignore` anchored saves/settings incorrectly.
+Engine `d4c60bf6` links `licenses` into player data; bundle-storage regression
+test passes. Current installed binary remains the prior qualified code candidate,
+with its player-data license link repaired; rebuilding that engine fix into
+release binaries is pending. Native saves/settings now resolve inside
+`~/Library/Application Support/net.ramine.r4recomp/`; fixture copies are local
+there. No existing player data was overwritten (directory did not exist).
+User has the race for Triangle/right-stick/Create physical-controller testing. Temporary PC test folder
+and task: `R4ControllerCheck20261116`; remove after finishing verification.
+Repo origin now follows `tetrisgm/RidgeRacerType4Remaster`.
+
+## Release 0.2.2 — complete locally
+
+- Mac: `dist/macos/R4-0.2.2-macOS-arm64.zip`, Developer-ID signed,
+  notarized, stapled and Gatekeeper accepted.
+- PC: `dist/windows/R4-0.2.2-Windows-x64.zip`, unsigned portable x64,
+  tested natively on the RTX 4080 SUPER at a 3840×2160 drawable.
+
+Engine `d81b3919`, game integration `63f58850`, UI `a786d20`. Rewind restores
+already-issued rendering work and uses safe checkpoint anchors. Menu, controls,
+settings, MStan performance and Steam Controller fixes remain intact.
+
+Mac: 59.86 VBlanks/s over two minutes, 3,599/3,599 intermediate frames,
+maximum guest-frame interval 35.542 ms. Internal release measurements 27–55 ms
+across the sustained and final version-stamped checks. PC: 59.96 VBlanks/s over
+two minutes, 3,598/3,598 intermediates, maximum sampled presentation interval
+19.143 ms, internal releases 42–72 ms. Neither is a zero-latency/all-course promise.
+
+All 44 Mac tests and actual signed-bundle menu/binding/settings restart checks
+pass. Exact state/image checks pass on both platforms: Mac 130 comparisons plus
+96 in the signed package; PC 108 comparisons. No RAM differences or pixel
+mismatches. Reviewed tunnel, sky, ground and consecutive resume captures show no
+observed seams, blinking artifacts, displaced HUD or resolution drop. Mac app
+was also checked on screen. Zero dispatch misses in tested routes.
+
+Tests were muted. Owner plans separate listening and physical Steam Controller
+playtests. No public release/feed was published; 0.2.1 artifacts remain intact.
+NAS and unrelated work were untouched. Native PC test task/folder and the exact
+EXE ASR exception were removed; original security settings restored, volume
+unchanged. Cleanup: `analysis/windows-022-20261112/cleanup.json`.
+
+## Desktop playtest launchers
+
+Both desktops have **R4 Recompiled (Steam)**, launching the non-Steam 0.2.2
+entry with Steam Input enabled for this game. Mac install:
+`~/Applications/R4-0.2.2/`; PC install: `C:\Users\steam\Games\R4\0.2.2\`.
+The owner's disc path is supplied by each Steam entry. PC disc copy is outside
+the release folder. Steam configs were backed up; setup tasks/files removed.
+No security exception was added for these permanent installs. Setup receipts:
+`analysis/steam-desktop-20261112/`. Mac Steam client restored from Valve's installer.
+
+## References
+
+- [Fix and evidence](recovery/REWIND_RELEASE_FIX_20261112.md)
+- [Mac receipt](recovery/MAC_RELEASE_20261112.json)
+- [Windows receipt](recovery/WINDOWS_RELEASE_20261112.json)
+- [Release notes](../RELEASE_NOTES.md)
+- [Rewind](REWIND_PLAYBACK.md) / [pins](framework_pin_history.md)
+- [Mac workflow](MAC_BUILD.md) / [Windows workflow](WINDOWS_BUILD.md)
+
+Current grid: `analysis/rewind-release-grid-20261112/memcards`, execution identity
+`f3a59eb52c450e6d9f22c0cd78332c02932ca5ef11cbc3c5ffeb9787b8bb9135`.
+Never bypass execution identity. Keychain profile `pp-notary` works. The native
+PC suites saved passing results before debug `quit` reported busy; the one-off
+task cleanup stopped the process. This did not affect recorded race/rewind data.

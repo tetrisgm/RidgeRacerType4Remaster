@@ -45,7 +45,17 @@ int main(void) {
     assert(memcmp(&s_main,&before,sizeof before)==0);
     g_psx_render_pass_active=0;
     for (int i=0;i<5;i++) wr32(k_camera_inputs[i],adjusted[i]);
-    r4_camera_look_restore(0,0);
+    CPUState cpu = {0};
+    cpu.gpr[31]=R4_CAMERA_LOOK_LOOP_HEAD_RETURN;
+    g_psx_render_pass_active=1;
+    r4_camera_look_restore(&cpu,0);
+    assert(s_restore_pending);
+    g_psx_render_pass_active=0;
+    cpu.gpr[31]=0x8001E774u; /* second OT clear is not the frame boundary */
+    r4_camera_look_restore(&cpu,0);
+    assert(s_restore_pending);
+    cpu.gpr[31]=R4_CAMERA_LOOK_LOOP_HEAD_RETURN;
+    r4_camera_look_restore(&cpu,0);
     assert(rd32(R4_CAMERA_INPUT_YAW)==100);
     assert(rd32(R4_CAMERA_INPUT_POS+8)==800);
     assert(!s_restore_pending);

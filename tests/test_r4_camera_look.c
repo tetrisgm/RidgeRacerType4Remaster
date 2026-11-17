@@ -97,7 +97,6 @@ static float radius_from_car(const R4CameraLookInput *camera,
 }
 
 int main(void) {
-    assert(R4_CAMERA_LOOK_INPUT_RESTORE_ENTRY == 0x800738C4u);
     assert(r4_camera_look_scene_eligible(1, 0, 1));
     assert(r4_camera_look_scene_eligible(3, 0, 1));
     assert(!r4_camera_look_scene_eligible(0, 0, 1));
