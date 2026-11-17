@@ -3,6 +3,28 @@
 Owner update (2026-11-17): sound is enabled for playtests going forward on all
 platforms; this supersedes earlier requests for muted testing.
 
+## Menu follow-up in progress
+
+Launcher `27bbe4f` enters each submenu with visible focus on its first available
+control and restores the parent selection on Back. Snapshot pages have only
+Back in their rail; Load starts at the first occupied slot. First-run help is
+compact, acknowledged once and pauses the guest until Start/A/Enter. The main
+menu retains the guest backdrop and dims the whole viewport. Native Mac checks with sound enabled pass in
+`analysis/submenu-navigation-20261117-confirm/`: immediate A saves/loads the
+first slot after mouse entry, parent return remains paused, 7,172,649 static
+hits and zero dispatch misses. Release build, 45 runtime tests and 19 launcher
+tests pass. The launcher checks include visible focus and immediate confirmation.
+
+`55035165` reaches full rear look at half downward stick travel, leaves lateral
+response unchanged, retains wide presentation through race finish and disables
+rewind capture/activation during replay. Unit tests pass; natural finish/replay
+performance and moving-camera visual acceptance still need a final run.
+Native menu item draws are unlinked without skipping their animation/state
+updates. The original title background remains visible; review its branding
+alongside the custom heading before claiming the home presentation final.
+
+The packaged candidate below predates these follow-ups. Do not label it updated.
+
 ## Current candidate
 
 Menu/local multiplayer integration is committed and pushed as `8d4557ff`.

@@ -30,6 +30,12 @@ Menu code never invokes guest code from the render thread.
 
 ## Verification
 
+- `analysis/submenu-navigation-20261117-confirm/`: native Mac with sound,
+  immediate A confirmation on Save/Load entry, Back to the parent, zero dispatch
+  misses and 7,172,649 static overlay hits. The load screenshot shows the first
+  occupied slot highlighted. Launcher tests require visible navigation focus
+  and cover entry to Graphics, Controls, Mods, Settings and snapshot pages.
+
 - `analysis/menu-redesign-20261117-check1/`: actual-game snapshot navigation,
   settings persistence and zero dispatch misses.
 - `analysis/menu-redesign-20261117-check2/`: subsequent boot-to-race/menu pass,
