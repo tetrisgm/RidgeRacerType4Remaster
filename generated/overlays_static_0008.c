@@ -10604,6 +10604,7 @@ block_801157EC:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x4u);
 #endif
+psx_mod_instruction(cpu, 0x801157ECu, 0x2442000Fu);
     { uint32_t _pgx1 = cpu->gpr[2]; cpu->gpr[2] = cpu->gpr[2] + 15;
     PGXP_ALU(0x2442000Fu, cpu->gpr[2], _pgx1, 0x0000000Fu); }  /* 0x801157EC: 0x2442000F */
 #ifdef PSX_COSIM
@@ -15936,7 +15937,8 @@ block_80115F6C:
 #ifdef PSX_COSIM
     cosim_instr(0x80115F70u);
 #endif
-    #ifdef PSX_ENABLE_BLOCK_CYCLES
+    psx_mod_instruction(cpu, 0x80115F74u, 0x0C01BAAEu);
+#ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x80000000u);
 #endif
     cpu->gpr[31] = 0x80115F7Cu;  /* jal link before delay slot */
@@ -16006,7 +16008,8 @@ block_80115F84:
 #if defined(PSX_ENABLE_BLOCK_CYCLES) && defined(PSX_NATIVE_CPU_SPANS)
     psx_native_span_charge(2u);
 #endif
-    #ifdef PSX_ENABLE_BLOCK_CYCLES
+    psx_mod_instruction(cpu, 0x80115F84u, 0x0C01B934u);
+#ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x80115F84u);
 #endif
 #ifdef PSX_ENABLE_BLOCK_CYCLES
@@ -16106,8 +16109,11 @@ block_80115F8C:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x9u);
 #endif
-    { uint32_t _pgxa = cpu->gpr[3] + 1188; g_debug_last_store_pc = 0x80115FA8u; psx_store_cycle_barrier(); cpu->write_word(cpu->gpr[3] + 1188, cpu->gpr[0]);
+psx_mod_instruction(cpu, 0x80115FA8u, 0xAC6004A4u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x80115FA8u, 0xAC6004A4u, (uint32_t)(cpu->gpr[3] + 1188));
+    { uint32_t _pgxa = _mod_ea; g_debug_last_store_pc = 0x80115FA8u; psx_store_cycle_barrier(); cpu->write_word(_mod_ea, cpu->gpr[0]);
     PGXP_STORE(0xAC6004A4u, _pgxa, cpu->gpr[0]); }  /* 0x80115FA8: 0xAC6004A4 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x80115FA8u);
 #endif
@@ -16378,7 +16384,8 @@ block_80116024:
 #if defined(PSX_ENABLE_BLOCK_CYCLES) && defined(PSX_NATIVE_CPU_SPANS)
     psx_native_span_charge(2u);
 #endif
-    #ifdef PSX_ENABLE_BLOCK_CYCLES
+    psx_mod_instruction(cpu, 0x80116024u, 0x0C0455A1u);
+#ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x80116024u);
 #endif
 #ifdef PSX_ENABLE_BLOCK_CYCLES

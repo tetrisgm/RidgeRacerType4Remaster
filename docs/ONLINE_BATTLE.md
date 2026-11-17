@@ -6,7 +6,8 @@ game on their own machine and sees their own car full screen. The host is
 Player 1; each player who joins takes the next free seat (P2, P3, P4). A
 session of 2, 3 or 4 players races 2, 3 or 4 cars.
 
-Local split screen stays two players: the stock VS Battle on pads 1 and 2.
+Local multiplayer is separate and does not create a network session. The custom
+main menu offers 2–4 players; see [local multiplayer](LOCAL_MULTIPLAYER.md).
 
 ## Playing
 

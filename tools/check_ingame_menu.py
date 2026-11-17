@@ -21,7 +21,13 @@ def check_menu(output, port):
             if value:
                 return value
             time.sleep(.08)
-        raise RuntimeError('Timed out waiting for custom menu operation')
+        failure = {'menu': call('menu_host'), 'frame': call('frame')}
+        failure['guest'] = {hex(a): call('read_ram', addr=hex(a), len=n)['hex']
+                            for a, n in [(0x800F4E1A, 2), (0x800F3BD6, 2),
+                                         (0x800FF860, 4), (0x800F4EF4, 2),
+                                         (0x800F4E18, 1)]}
+        (output / 'failure.json').write_text(json.dumps(failure, indent=2))
+        raise RuntimeError(f'Timed out waiting for custom menu operation: {failure}')
     def state(opened):
         return until(lambda: (s if s['open'] == opened else None)
                      if (s := call('menu_host')) else None)
@@ -41,6 +47,10 @@ def check_menu(output, port):
     call('clear_input')
     call('window_size', w=1280, h=720)
     before = state(0)
+    # The smoke route just left turbo; let the game publish its race actions
+    # at a normal main-loop boundary after resizing before injecting Start.
+    ready_frame = call('frame')['frame']
+    until(lambda: call('frame')['frame'] >= ready_frame + 2)
     binding = output.parent / 'keybinds.ini'
     binding_check = None
     if binding.exists() and 'cross = K' in binding.read_text():
@@ -50,6 +60,13 @@ def check_menu(output, port):
         assert before['p1_cross_button'] == 2, before    # SDL X / west
         binding_check = {k: before[k] for k in ('p1_cross_scancode', 'p1_cross_button')}
     assert before['attached'] and before['provider'] == 'recomp-launcher', before
+    # Both controller Start and the default keyboard Start replace native pause.
+    for command, name in [('host_button', 'start'), ('host_key', 'Return')]:
+        call(command, name=name)
+        state(1)
+        native_pause = call('read_ram', addr='0x800F4E18', len=1)
+        assert native_pause['hex'] == '00', native_pause
+        back(); state(0)
     back()
     opened = state(1)
     assert opened['paused'] and opened['pause_depth'] == 1, opened
@@ -70,16 +87,31 @@ def check_menu(output, port):
     for _ in range(3):
         back(); state(1)
         back(); state(0)
+    # Rapid Resume clicks must not remain queued across closed menu frames.
+    back(); state(1)
+    for _ in range(3):
+        call('host_mouse', x=180, y=163)
+    state(0)
+    call('host_button', name='start'); state(1)
+    time.sleep(.3)
+    assert call('menu_host')['open'], 'A stale Resume click closed the reopened menu'
+    back(); state(0)
     call('host_button', name='guide'); state(1)
     call('host_button', name='guide'); state(0)
     back(); state(1)
     click(190, 211)  # Save State
     shot('save-slots.png')
     click(650, 235)  # first slot
-    state(0)
+    state(1)
     saved = until(lambda: (s if s.get('last_ok') == 1 and s.get('last_op') == 'save' else None)
                   if (s := call('savestate_status')) else None, 20)
-    back(); state(1)
+    until(lambda: call('menu_host')['paused'])
+    frozen = call('frame')['frame']
+    time.sleep(.3)
+    assert call('frame')['frame'] == frozen, 'Saving resumed the race behind the menu'
+    back(); state(1)  # Save page -> main, not gameplay
+    click(190, 259)  # Load State
+    back(); state(1)  # Cancelling Load must also return to the main menu
     click(190, 259)  # Load State
     time.sleep(1.2)  # slot metadata refresh
     shot('load-slots.png')

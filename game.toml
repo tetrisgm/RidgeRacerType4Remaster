@@ -50,7 +50,10 @@ strict = true
 # for them (upstream runs a hook only while the resolved plan activates
 # the plugin id that registered it). Changing this list
 # needs tools/regen.sh.
+mod_instruction_sites = ["0x801157EC", "0x80115F74", "0x80115F84", "0x80115FA8", "0x80116024"]
 mod_function_entry_funcs = [
+  # Custom main menu submits choices through the original menu handler.
+  "0x8002F5E8",
   # Draw-isolation gate: keep object sound side effects on the main context.
   "0x8004F520", "0x8004F5E0", "0x80051840", "0x80051B00",
   # Draw-isolation gate: attract-demo and after-goal replay producers.
@@ -63,14 +66,14 @@ mod_function_entry_funcs = [
   "0x80034F14", "0x80039C04", "0x8002258C", "0x80022048", "0x800559BC", "0x80055968",
   # HUD range closers: the next non-HUD producer in every race draw path
   "0x80020A98", "0x80021A20", "0x80021BA4", "0x80022340", "0x80034B50", "0x800207D4",
-  "0x8006E4D0", "0x8006F2B0", "0x8002E554", "0x8006F00C", "0x80074AD8", "0x800374F8",
+  "0x8006E4D0", "0x8006F2B0", "0x8002E554", "0x8006F00C", "0x8006F4AC", "0x80017CB8", "0x80074AD8", "0x800374F8",
   "0x80070A58", # also r4.enhancement.hide-rear-view-mirror entry hook
   # r4.enhancement.camera-lookaround: restore the previous eye before the
   # next guest camera update writes fresh scratch inputs (not at car-draw entry).
   "0x800738C4",
   # ClearOTagR (clear a buffer's HUD tags) and DrawOTag (tag the frame's
   # HUD)
-  "0x80093418", "0x80093520",
+  "0x80093418", "0x80093520", "0x80013014",
   # course visibility list: heading octant, first list consumer
   "0x8006F584", "0x8007166C",
   # VSync, main loop VSync(0) (ra 0x8001E7E4): r4.enhancement.max-detail
@@ -97,7 +100,7 @@ mod_function_entry_funcs = [
   # Two-seat Link Battle: HUD setup at race init and the call after it.
   "0x8002094C", "0x8007807C",
   # Link teardown's zero SIO1 handles must not close the game's CD EvCB.
-  "0x800970A0", "0x80097060",
+  "0x800970A0", "0x80097060", "0x80097140",
   # Link overlay packet, view and HUD sites the same filters guard. Native
   # overlay shards call entry hooks only for addresses listed here.
   "0x80115520", "0x80115198", "0x80115310", "0x80115770", "0x801157EC", "0x80115D90", "0x80115F84", "0x80115FA8", "0x80116024",

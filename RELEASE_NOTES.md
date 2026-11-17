@@ -1,5 +1,14 @@
 # Ridge Racer Type 4 Remaster — v0.2.3 release preparation
 
+The new main and race menus keep Restart/Retire, controls, settings and snapshots
+in one flow. Back returns to the parent page, disc selection stays inside the
+menu, and first launch introduces controls and multiplayer. Local split-screen
+supports two to four independently controlled players; online play remains
+separate. Graphics exposes the contributed Modern race HUD alongside HD HUD
+textures, including corrected split-screen layouts and stock-label filtering.
+These additions are development candidates pending fresh platform packages;
+the qualification figures below describe the preceding camera-fix builds.
+
 Fixed right-stick camera feedback and moving-car shaking. Camera offsets now
 restore before the chase update; the car-effects sampler no longer applies a
 second, conflicting camera filter. The integrated Select/Back menu, controls,

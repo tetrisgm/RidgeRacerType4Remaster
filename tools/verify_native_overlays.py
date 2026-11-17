@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--menu-script', type=Path, help='exercise the custom boot menu before smoke')
     parser.add_argument('--visible', action='store_true', help='show the isolated verification window')
     parser.add_argument('--present-thread', action='store_true', help='also qualify the presentation worker')
+    parser.add_argument('--race-hud', action='store_true', help='qualify the optional modern race HUD')
     args = parser.parse_args()
     if args.app and args.crossover_bottle:
         parser.error('--app and --crossover-bottle are mutually exclusive')
@@ -62,6 +63,15 @@ def main():
     env['PSX_VSYNC'] = '0'
     if args.menu_script:
         env['R4L_OVERLAY_SCRIPT'] = (windows_path(args.menu_script) if args.crossover_bottle else str(args.menu_script.resolve()))
+    if args.race_hud:
+        state = stage / 'mods/state.toml'
+        state.parent.mkdir(parents=True, exist_ok=True)
+        if not state.exists():
+            state.write_text('format_version = 2\n')
+        with state.open('a') as stream:
+            stream.write('\n[[package]]\nid = "r4.enhancement.race-hud"\n'
+                         '\n[[feature]]\npackage_id = "r4.enhancement.race-hud"\n'
+                         'id = "race-hud"\nenabled = true\n')
     (stage / 'settings.toml').write_text(f'[video]\npresent_thread = {str(args.present_thread).lower()}\n')
     executable = args.app.resolve() / 'Contents/MacOS/r4-runtime' if args.app else stage / executable_name
     launch = [str(executable), '--game', str(stage / 'game.toml'),
@@ -86,7 +96,7 @@ def main():
                         raise RuntimeError('OpenGL context creation failed; refusing software-only qualification')
                     if process.poll() is not None:
                         raise RuntimeError('Runtime exited during menu checks')
-                    for n in range(1, 6):
+                    for n in range(0, 6):
                         marker = f'[r4l-script] sleep 3.0{n}'
                         if marker in content and n not in captured:
                             captured.add(n)

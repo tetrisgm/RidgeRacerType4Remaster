@@ -29230,6 +29230,8 @@ void func_8002F5E8(CPUState* cpu)
         }
     }
     debug_server_log_call_entry(0x8002F5E8u);
+    if (psx_mod_function_entry(cpu, 0x8002F5E8u)) return;  /* trusted opt-in game-mod hook */
+    if (psx_mod_try_function_replacement(cpu, 0x8002F5E8u)) return;
     /* Address: 0x8002F5E8, Size: 996 bytes, Blocks: 47 */
 
 block_8002F5E8:

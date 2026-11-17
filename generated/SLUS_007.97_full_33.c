@@ -25059,6 +25059,8 @@ void func_8006F4AC(CPUState* cpu)
         }
     }
     debug_server_log_call_entry(0x8006F4ACu);
+    if (psx_mod_function_entry(cpu, 0x8006F4ACu)) return;  /* trusted opt-in game-mod hook */
+    if (psx_mod_try_function_replacement(cpu, 0x8006F4ACu)) return;
     /* Address: 0x8006F4AC, Size: 100 bytes, Blocks: 4 */
 
 block_8006F4AC:

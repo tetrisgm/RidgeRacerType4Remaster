@@ -11043,6 +11043,7 @@ block_801157D8:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x80u);
 #endif
+psx_mod_instruction(cpu, 0x801157ECu, 0x3C078010u);
     cpu->gpr[7] = 0x8010 << 16;  /* 0x80100000 */
     PGXP_ALU(0x3C078010u, cpu->gpr[7], 0u, 0u);  /* 0x801157EC: 0x3C078010 */
 #ifdef PSX_COSIM
@@ -16519,8 +16520,11 @@ block_80115F4C:
 #ifdef PSX_COSIM
     cosim_instr(0x80115F70u);
 #endif
-    { uint32_t _pgxa = cpu->gpr[2] + 20208; cpu->gpr[3] = psx_cyc_load_word(cpu, cpu->gpr[2] + 20208, 3, 0x4u);
+psx_mod_instruction(cpu, 0x80115F74u, 0x8C434EF0u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x80115F74u, 0x8C434EF0u, (uint32_t)(cpu->gpr[2] + 20208));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[3] = psx_cyc_load_word(cpu, _mod_ea, 3, 0x4u);
     PGXP_LOAD(0x8C434EF0u, _pgxa, cpu->gpr[3]); }  /* 0x80115F74: 0x8C434EF0 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x80115F74u);
 #endif
@@ -16570,8 +16574,11 @@ block_80115F84:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x80115F84u);
 #endif
-    { uint32_t _pgxa = cpu->gpr[18] + 14806; cpu->gpr[3] = (int32_t)(int16_t)psx_cyc_load_half(cpu, cpu->gpr[18] + 14806, 3, 0x40000u);
+psx_mod_instruction(cpu, 0x80115F84u, 0x864339D6u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x80115F84u, 0x864339D6u, (uint32_t)(cpu->gpr[18] + 14806));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[3] = (int32_t)(int16_t)psx_cyc_load_half(cpu, _mod_ea, 3, 0x40000u);
     PGXP_LOAD(0x864339D6u, _pgxa, cpu->gpr[3]); }  /* 0x80115F84: 0x864339D6 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x80115F84u);
 #endif
@@ -16642,6 +16649,7 @@ block_80115F84:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x8u);
 #endif
+psx_mod_instruction(cpu, 0x80115FA8u, 0x00031E00u);
     { uint32_t _pgx1 = cpu->gpr[3]; cpu->gpr[3] = cpu->gpr[3] << 24;
     PGXP_ALU(0x00031E00u, cpu->gpr[3], _pgx1, 24u); }  /* 0x80115FA8: 0x00031E00 */
 #ifdef PSX_COSIM
@@ -16932,8 +16940,11 @@ block_80116014:
 #ifdef PSX_COSIM
     cosim_instr(0x80116020u);
 #endif
-    { uint32_t _pgxa = cpu->gpr[18] + 20272; cpu->gpr[3] = psx_cyc_load_word(cpu, cpu->gpr[18] + 20272, 3, 0x40000u);
+psx_mod_instruction(cpu, 0x80116024u, 0x8E434F30u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x80116024u, 0x8E434F30u, (uint32_t)(cpu->gpr[18] + 20272));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[3] = psx_cyc_load_word(cpu, _mod_ea, 3, 0x40000u);
     PGXP_LOAD(0x8E434F30u, _pgxa, cpu->gpr[3]); }  /* 0x80116024: 0x8E434F30 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x80116024u);
 #endif

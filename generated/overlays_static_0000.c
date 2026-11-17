@@ -11751,7 +11751,8 @@ block_801157EC:
 #if defined(PSX_ENABLE_BLOCK_CYCLES) && defined(PSX_NATIVE_CPU_SPANS)
     psx_native_span_charge(2u);
 #endif
-    #ifdef PSX_ENABLE_BLOCK_CYCLES
+    psx_mod_instruction(cpu, 0x801157ECu, 0x0C00BF5Au);
+#ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x801157ECu);
 #endif
 #ifdef PSX_ENABLE_BLOCK_CYCLES
@@ -17637,8 +17638,11 @@ block_80115F64:
 #ifdef PSX_COSIM
     cosim_instr(0x80115F70u);
 #endif
-    { uint32_t _pgxa = cpu->gpr[17] + 20272; cpu->gpr[3] = psx_cyc_load_word(cpu, cpu->gpr[17] + 20272, 3, 0x20000u);
+psx_mod_instruction(cpu, 0x80115F74u, 0x8E234F30u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x80115F74u, 0x8E234F30u, (uint32_t)(cpu->gpr[17] + 20272));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[3] = psx_cyc_load_word(cpu, _mod_ea, 3, 0x20000u);
     PGXP_LOAD(0x8E234F30u, _pgxa, cpu->gpr[3]); }  /* 0x80115F74: 0x8E234F30 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x80115F74u);
 #endif
@@ -17672,6 +17676,7 @@ block_80115F64:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x4u);
 #endif
+psx_mod_instruction(cpu, 0x80115F84u, 0x3C02800Fu);
     cpu->gpr[2] = 0x800F << 16;  /* 0x800F0000 */
     PGXP_ALU(0x3C02800Fu, cpu->gpr[2], 0u, 0u);  /* 0x80115F84: 0x3C02800F */
 #ifdef PSX_COSIM
@@ -17786,7 +17791,8 @@ block_80115FA0:
 #ifdef PSX_COSIM
     cosim_instr(0x80115FA4u);
 #endif
-    #ifdef PSX_ENABLE_BLOCK_CYCLES
+    psx_mod_instruction(cpu, 0x80115FA8u, 0x0C00ACFAu);
+#ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x80000000u);
 #endif
     cpu->gpr[31] = 0x80115FB0u;  /* jal link before delay slot */
@@ -18144,6 +18150,7 @@ block_80116018:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x10u);
 #endif
+psx_mod_instruction(cpu, 0x80116024u, 0x24840024u);
     { uint32_t _pgx1 = cpu->gpr[4]; cpu->gpr[4] = cpu->gpr[4] + 36;
     PGXP_ALU(0x24840024u, cpu->gpr[4], _pgx1, 0x00000024u); }  /* 0x80116024: 0x24840024 */
 #ifdef PSX_COSIM
@@ -26553,7 +26560,8 @@ block_801157EC:
 #if defined(PSX_ENABLE_BLOCK_CYCLES) && defined(PSX_NATIVE_CPU_SPANS)
     psx_native_span_charge(2u);
 #endif
-    #ifdef PSX_ENABLE_BLOCK_CYCLES
+    psx_mod_instruction(cpu, 0x801157ECu, 0x0C00BF5Au);
+#ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x801157ECu);
 #endif
 #ifdef PSX_ENABLE_BLOCK_CYCLES

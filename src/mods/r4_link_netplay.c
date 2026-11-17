@@ -13,6 +13,9 @@
 #include "mod_plugins.h"
 #include "psx_netplay.h"
 #include "cpu_state.h"
+#include "sio.h"
+#include "r4_local_battle.h"
+#include "r4_race_hud.h"
 #include "r4_link_analog_steering.h"
 #if !defined(PSX_NO_DEBUG_TOOLS) && !defined(R4_LINK_TEST)
 #include "netplay_state_digest.h"
@@ -30,6 +33,44 @@
 
 #define R4_LINK_MODE 0x800F4EF4u
 #define R4_LINK_OVERLAY_BASE 0x801149A8u
+/* Local battle uses the same car/viewport commands with locally sampled pads.
+ * This is guest memory so loading or rewinding restores the selected count. */
+static uint32_t r4_local_battle_config;
+static uint32_t r4_battle_button_latches;
+int r4_local_battle_set_players(unsigned players)
+{
+    if (!r4_local_battle_config || players < 2u || players > 4u ||
+        psx_netplay_seat_count() != 0) return 0;
+    psx_mod_write_word(r4_local_battle_config, players);
+    psx_mod_write_word(r4_local_battle_config + 4u, players > 2u);
+    return 1;
+}
+static int r4_battle_seat_count(void)
+{
+    const int online = psx_netplay_seat_count();
+    if (online) return online;
+    const unsigned local = r4_local_battle_config ? psx_mod_read_word(r4_local_battle_config) : 0;
+    return local >= 3u && local <= 4u ? (int)local : 4;
+}
+static int r4_battle_pad(int seat, PsxNetPad *out)
+{
+    if (psx_netplay_seat_count()) return psx_netplay_sim_pad(seat, out);
+    if (!out || seat < 0 || seat >= 4) return 0;
+    memset(out, 0, sizeof(*out));
+    uint8_t sticks[4], pressure[3];
+    sio_get_pad_sticks(seat, sticks);
+    out->buttons = sio_get_pad_buttons_slot(seat);
+    out->connected = sio_get_pad_connected(seat);
+    out->analog = sio_get_pad_analog(seat);
+    out->lx = sticks[0]; out->ly = sticks[1];
+    out->rx = sticks[2]; out->ry = sticks[3];
+    if (out->analog == SIO_PAD_NEGCON) {
+        sio_get_pad_negcon(seat, pressure);
+        out->rx = pressure[0]; out->ry = pressure[1];
+    }
+    return 1;
+}
+
 /* Accepted entrants at mode-4 race init (0x8003821C); 2 selects the retail
  * one-view-per-console layout in the link handler (0x801157A4). */
 #define R4_LINK_ENTRANTS 0x80107328u
@@ -65,6 +106,91 @@ static uint32_t r4_link_extra_ot;
 #define R4_LINK_OT_BYTES 0xB00u
 #define R4_LINK_BUFFER_BYTES 0x22778u
 #define R4_LINK_OT_ALLOC_BYTES (4u * R4_LINK_OT_BYTES + 8u)
+/* Packet consumers follow the allocator when Max Detail relocates its heap.
+ * Fixed retail OTs/HUD records remain in the original frame buffer. */
+extern int r4_max_detail_draw_heap_contains(uint32_t buffer, uint32_t start, uint32_t end);
+static int r4_link_packet_span(uint32_t buffer, uint32_t start, uint32_t bytes)
+{
+    if ((start & 3u) || bytes > UINT32_MAX - start) return 0;
+    const uint32_t end = start + bytes;
+    return (start >= buffer && end <= buffer + R4_LINK_BUFFER_BYTES) ||
+           r4_max_detail_draw_heap_contains(buffer, start, end);
+}
+/* Fixed rank sprites are initialized once per race. Their tag links must
+ * be restored before the next frame reuses the primitive heap; otherwise
+ * unlinking extra HUD sprites leaves a pointer into an expired packet. */
+static uint32_t r4_link_saved_rank_tags;
+static void r4_link_restore_rank_tags(struct CPUState *cpu, uint32_t address)
+{
+    (void)address;
+    if (!cpu || cpu->gpr[31] != 0x8001E764u || !r4_link_saved_rank_tags) return;
+    const uint32_t buffer = psx_mod_read_word(r4_link_saved_rank_tags);
+    if (buffer == 0x800ADCA0u || buffer == 0x800D0418u)
+        for (unsigned i = 0; i < 12u; ++i)
+            psx_mod_write_word(buffer + 0x22688u + 20u * i,
+                psx_mod_read_word(r4_link_saved_rank_tags + 4u + 4u * i));
+    psx_mod_write_word(r4_link_saved_rank_tags, 0);
+}
+static void r4_link_save_rank_tags(void)
+{
+    if (!r4_link_saved_rank_tags) return;
+    const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
+    if (buffer != 0x800ADCA0u && buffer != 0x800D0418u) return;
+    for (unsigned i = 0; i < 12u; ++i)
+        psx_mod_write_word(r4_link_saved_rank_tags + 4u + 4u * i,
+            psx_mod_read_word(buffer + 0x22688u + 20u * i));
+    psx_mod_write_word(r4_link_saved_rank_tags, buffer);
+}
+/* The stock car renderer keeps projected taillight rings in 16 records
+ * shared by its two views. A four-view frame must never connect a current
+ * projection to a previous projection from another camera. Keep the ring
+ * counters, intensities and vertex data per local viewport; model pointers
+ * and simulation state remain owned by the game. */
+#define R4_TRAIL_VIEW_BYTES 0x8000u
+static uint32_t r4_link_trail_views;
+static void r4_link_reset_trails(struct CPUState *cpu, uint32_t address)
+{
+    (void)cpu; (void)address;
+    if (r4_link_trail_views)
+        for (unsigned view = 0; view < 4u; ++view)
+            psx_mod_write_word(r4_link_trail_views + view * R4_TRAIL_VIEW_BYTES, 0);
+}
+static void r4_link_trails(unsigned view, int save)
+{
+    if (!r4_link_trail_views || view >= 4u || psx_netplay_seat_count() ||
+        r4_battle_seat_count() < 3) return;
+    const uint32_t cache = r4_link_trail_views + view * R4_TRAIL_VIEW_BYTES;
+    uint32_t cursor = cache + 4u;
+    const int valid = psx_mod_read_word(cache) != 0;
+    for (unsigned i = 0; i < 4u * (unsigned)r4_battle_seat_count(); ++i) {
+        const uint32_t record = 0x8010B410u + 200u * i;
+        const uint32_t first = psx_mod_read_word(record + 64u);
+        const uint32_t next = psx_mod_read_word(record + 72u);
+        const uint32_t bytes = next - first;
+        if ((first & 3u) || (bytes & 3u) || !bytes || first < 0x80000000u ||
+            next >= 0x80200000u || bytes > (R4_TRAIL_VIEW_BYTES - 4u) / 4u ||
+            cursor + 24u + 4u * bytes > cache + R4_TRAIL_VIEW_BYTES) return;
+        for (unsigned ring = 0; ring < 4u; ++ring) {
+            const uint32_t ptr = psx_mod_read_word(record + 64u + 8u * ring);
+            if (ptr < 0x80000000u || ptr > 0x80200000u - bytes || (ptr & 3u)) return;
+        }
+        for (unsigned field = 0; field < 6u; ++field) {
+            const uint32_t offset = field < 2u ? 52u + 4u * field : 60u + 8u * (field - 2u);
+            if (save) psx_mod_write_word(cursor, psx_mod_read_word(record + offset));
+            else psx_mod_write_word(record + offset, valid ? psx_mod_read_word(cursor) : 0u);
+            cursor += 4u;
+        }
+        for (unsigned ring = 0; ring < 4u; ++ring) {
+            const uint32_t ptr = psx_mod_read_word(record + 64u + 8u * ring);
+            for (uint32_t b = 0; b < bytes; b += 4u) {
+                if (save) psx_mod_write_word(cursor + b, psx_mod_read_word(ptr + b));
+                else if (valid) psx_mod_write_word(ptr + b, psx_mod_read_word(cursor + b));
+            }
+            cursor += bytes;
+        }
+    }
+    if (save) psx_mod_write_word(cache, 1u);
+}
 static unsigned r4_link_draw_view;
 /* Set by this main-loop iteration's link race handler (0x80115770), cleared
  * by its final DrawOTag: the OT and HUD packet edits below only touch a
@@ -88,8 +214,7 @@ static void r4_link_unlink_extra_hud(struct CPUState *cpu, unsigned seats)
     uint32_t current = cpu->gpr[4];
     if (seats != 3u && seats != 4u) return; /* extra seats only */
     for (unsigned steps = 0; steps < 32768u; ++steps) {
-        if ((current & 3u) || current < buffer ||
-            current + 20u > buffer + R4_LINK_BUFFER_BYTES) break;
+        if (!r4_link_packet_span(buffer, current, 20u)) break;
         const uint32_t tag = psx_mod_read_word(current);
         const unsigned words = tag >> 24;
         const uint32_t next = tag & 0x00FFFFFFu;
@@ -100,6 +225,15 @@ static void r4_link_unlink_extra_hud(struct CPUState *cpu, unsigned seats)
             for (unsigned slot = 2u; slot < seats; ++slot)
                 if (current >= r4_link_hud_start[slot] &&
                     current < r4_link_hud_end[slot]) extra_sprite = 1;
+            /* The second fixed rank/time-limit group is cloned into the
+             * upper-right view. Its original lower-half sprites must not
+             * remain visible in the unused fourth quadrant of a 3P race. */
+            if (current >= buffer + 0x22700u && current < buffer + 0x22778u)
+                extra_sprite = 1;
+            if (r4_race_hud_replaces_rank() && current >= buffer + 0x22688u &&
+                current < buffer + 0x22778u &&
+                (current - buffer - 0x22688u) % 0x78u < 100u)
+                extra_sprite = 1;
         }
         if (extra_sprite) {
             if (prev) {
@@ -108,7 +242,7 @@ static void r4_link_unlink_extra_hud(struct CPUState *cpu, unsigned seats)
                     (prev_tag & 0xFF000000u) | next);
             } else cpu->gpr[4] = 0x80000000u | next;
         } else prev = current;
-        if (next == 0x00FFFFFFu || next >= 0x00200000u) break;
+        if (next == 0x00FFFFFFu || next >= 0x00800000u) break;
         current = 0x80000000u | next;
     }
 }
@@ -120,13 +254,15 @@ static void r4_link_unlink_extra_hud(struct CPUState *cpu, unsigned seats)
  * bounded primitive heap after the game's own rank updates have completed. */
 static void r4_link_place_rank_packets(unsigned seats)
 {
+    /* The finish camera still renders the split views but no longer builds
+     * a race HUD. Its fixed packet storage can hold other overlays: only
+     * clone the rank group when this frame actually built the race HUD. */
+    if (!r4_link_hud_start[0] || r4_link_hud_end[0] <= r4_link_hud_start[0]) return;
     const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
     uint32_t heap = psx_mod_read_word(0x1F800000u);
     const uint32_t base = buffer + 0x22688u;
     if (!r4_link_seats_ok((int)seats) || r4_link_buffer_index() > 1u ||
-        (heap & 3u) || heap < buffer ||
-        heap + 6u * (seats - 1u) * 20u >
-            buffer + R4_LINK_BUFFER_BYTES) return;
+        !r4_link_packet_span(buffer, heap, 6u * (seats - 1u) * 20u)) return;
     for (unsigned seat = 0; seat < seats; ++seat) {
         const unsigned source_seat = seat & 1u;
         /* Copies are drawn by the HUD overlay after every view's road. */
@@ -134,6 +270,7 @@ static void r4_link_place_rank_packets(unsigned seats)
         const int dx = seat & 1u ? 160 : 0;
         const int dy = seat == 1u ? -120 : seat == 2u ? 120 : 0;
         for (unsigned packet = 0; packet < 6u; ++packet) {
+            if (packet < 5u && r4_race_hud_replaces_rank()) continue;
             const uint32_t source = base + 0x78u * source_seat + 20u * packet;
             const uint32_t tag = psx_mod_read_word(source);
             if ((tag >> 24) != 4u ||
@@ -145,9 +282,10 @@ static void r4_link_place_rank_packets(unsigned seats)
                                        psx_mod_read_word(source + 4u * word));
                 psx_mod_write_word(dest, 0x04FFFFFFu);
             }
-            if (dx || dy) {
+            {
                 const uint32_t xy = psx_mod_read_word(dest + 8u);
-                const int x = (int16_t)xy + dx;
+                const int native_x = (int16_t)xy;
+                const int x = native_x - (native_x >= 225 ? 160 : 0) + dx;
                 const int y = (int16_t)(xy >> 16) + dy;
                 psx_mod_write_word(dest + 8u,
                     ((uint32_t)(uint16_t)y << 16) | (uint16_t)x);
@@ -172,6 +310,41 @@ static void r4_link_place_rank_packets(unsigned seats)
             }
         }
     }
+    psx_mod_write_word(0x1F800000u, heap);
+}
+
+/* 0x80021134 emits the two retail mph/rpm label pairs after the dynamic
+ * HUD. Give every viewport its own copies, then hide those source sprites;
+ * the source packets are rebuilt by the game on the next frame. */
+static void r4_link_place_unit_labels(unsigned seats)
+{
+    if (seats < 3u || seats > 4u) return;
+    const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
+    const uint32_t source = r4_link_hud_end[seats - 1u];
+    uint32_t heap = psx_mod_read_word(0x1F800000u);
+    if (!r4_link_packet_span(buffer, source, 80u) ||
+        !r4_link_packet_span(buffer, heap, 40u * seats)) return;
+    for (unsigned p = 0; p < 4u; ++p)
+        if ((psx_mod_read_word(source + 20u*p) >> 24) != 4u ||
+            (psx_mod_read_word(source + 20u*p + 4u) >> 24) != 0x65u)
+            return;
+    for (unsigned seat = 0; seat < seats; ++seat)
+        for (unsigned p = 0; p < 2u; ++p) {
+            for (unsigned w = 0; w < 5u; ++w)
+                psx_mod_write_word(heap + 4u*w, psx_mod_read_word(source + 20u*p + 4u*w));
+            const uint32_t xy = psx_mod_read_word(heap + 8u);
+            const int x = (int16_t)xy - 160 + (seat & 1u ? 160 : 0);
+            const int y = (int16_t)(xy >> 16) + (seat >= 2u ? 120 : 0);
+            psx_mod_write_word(heap + 8u, ((uint32_t)(uint16_t)y << 16) | (uint16_t)x);
+            psx_mod_write_word(heap, 0x04FFFFFFu);
+            if (r4_link_hud_copy_tail) {
+                const uint32_t tag = psx_mod_read_word(r4_link_hud_copy_tail);
+                psx_mod_write_word(r4_link_hud_copy_tail, (tag & 0xFF000000u) | (heap & 0x00FFFFFFu));
+            } else r4_link_hud_copy_head = heap;
+            r4_link_hud_copy_tail = heap;
+            heap += 20u;
+        }
+    for (unsigned p = 0; p < 4u; ++p) psx_mod_write_word(source + 20u*p + 16u, 0);
     psx_mod_write_word(0x1F800000u, heap);
 }
 
@@ -236,14 +409,12 @@ static int r4_link_extract_view_env(unsigned view)
     const uint32_t head = psx_mod_read_word(slot);
     const uint32_t packet = head & 0x00FFFFFFu;
     const uint32_t packet_guest = 0x80000000u | packet;
-    if ((packet & 3u) || packet_guest < buffer + 0x1670u ||
-        packet_guest >= buffer + R4_LINK_BUFFER_BYTES ||
+    if (!r4_link_packet_span(buffer, packet_guest, 4u) ||
         psx_mod_read_word(extra) != 0x00FFFFFFu) return 0;
     const uint32_t tag = psx_mod_read_word(packet_guest);
     const uint32_t old = tag & 0x00FFFFFFu;
     if ((old & 3u) || old == packet ||
-        ((0x80000000u | old) < buffer ||
-         (0x80000000u | old) >= buffer + R4_LINK_BUFFER_BYTES)) return 0;
+        !r4_link_packet_span(buffer, 0x80000000u | old, 4u)) return 0;
     psx_mod_write_word(slot, (head & 0xFF000000u) | old);
     psx_mod_write_word(extra, packet);
     return 1;
@@ -266,20 +437,16 @@ static int r4_link_append_ot(uint32_t root, unsigned seats)
         (psx_mod_read_word(extra3) & 0x00FFFFFFu) : 0;
     if (env2 == 0x00FFFFFFu || (seats == 4 && env3 == 0x00FFFFFFu) ||
         (env2 & 3u) || (env3 & 3u) ||
-        (0x80000000u | env2) < buffer + 0x1670u ||
-        (0x80000000u | env2) >= buffer + R4_LINK_BUFFER_BYTES ||
-        (seats == 4 && ((0x80000000u | env3) < buffer + 0x1670u ||
-                        (0x80000000u | env3) >= buffer + R4_LINK_BUFFER_BYTES))) return 0;
+        !r4_link_packet_span(buffer, 0x80000000u | env2, 4u) ||
+        (seats == 4 && !r4_link_packet_span(buffer, 0x80000000u | env3, 4u))) return 0;
     for (unsigned steps = 0; steps < 32768u; ++steps) {
-        if ((current & 3u) || current < buffer ||
-            current >= buffer + R4_LINK_BUFFER_BYTES) return 0;
+        if (!r4_link_packet_span(buffer, current, 4u)) return 0;
         const uint32_t tag = psx_mod_read_word(current);
         const uint32_t next = tag & 0x00FFFFFFu;
         const uint32_t next_guest = 0x80000000u | next;
-        if (next == 0x00FFFFFFu || next_guest < buffer ||
-            next_guest >= buffer + R4_LINK_BUFFER_BYTES) {
+        if (next == 0x00FFFFFFu || !r4_link_packet_span(buffer, next_guest, 4u)) {
             if (next != 0x00FFFFFFu &&
-                ((next & 3u) || next >= 0x00200000u)) return 0;
+                ((next & 3u) || next >= 0x00800000u)) return 0;
             /* Keep the game's shared packet/terminator after both extra OTs;
              * only the predecessor in this frame's private chain changes. */
             const uint32_t env2_tag = psx_mod_read_word(0x80000000u | env2);
@@ -370,13 +537,12 @@ static void r4_link_copy_hud_packets(uint32_t root, unsigned seats)
     uint32_t current = root;
     if (seats != 3u && seats != 4u) return;
     for (unsigned steps = 0; steps < 32768u; ++steps) {
-        if ((current & 3u) || current < buffer ||
-            current + 8u > buffer + R4_LINK_BUFFER_BYTES) return;
+        if (!r4_link_packet_span(buffer, current, 8u)) return;
         const uint32_t tag = psx_mod_read_word(current);
         const unsigned words = tag >> 24;
         const uint32_t next = tag & 0x00FFFFFFu;
         if ((words == 2u || words == 4u) &&
-            current + 4u * (words + 1u) <= buffer + R4_LINK_BUFFER_BYTES) {
+            r4_link_packet_span(buffer, current, 4u * (words + 1u))) {
             const uint32_t op = psx_mod_read_word(current + 4u) >> 24;
             if ((words == 2u && op == 0xE1u &&
                  psx_mod_read_word(current + 8u) == 0u) ||
@@ -388,8 +554,7 @@ static void r4_link_copy_hud_packets(uint32_t root, unsigned seats)
                         current < start || current >= end) continue;
                     const uint32_t heap = psx_mod_read_word(0x1F800000u);
                     const uint32_t bytes = 4u * (words + 1u);
-                    if ((heap & 3u) || heap < buffer ||
-                        heap + bytes > buffer + R4_LINK_BUFFER_BYTES) return;
+                    if (!r4_link_packet_span(buffer, heap, bytes)) return;
                     for (unsigned i = 0; i <= words; ++i)
                         psx_mod_write_word(heap + 4u * i,
                                            psx_mod_read_word(current + 4u * i));
@@ -423,7 +588,7 @@ static void r4_link_copy_hud_packets(uint32_t root, unsigned seats)
                 }
             }
         }
-        if (next == 0x00FFFFFFu || next >= 0x00200000u) return;
+        if (next == 0x00FFFFFFu || next >= 0x00800000u) return;
         current = 0x80000000u | next;
     }
 }
@@ -435,8 +600,7 @@ static void r4_link_place_retail_hud(uint32_t root, unsigned seats)
     const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
     uint32_t current = root;
     for (unsigned steps = 0; steps < 32768u; ++steps) {
-        if ((current & 3u) || current < buffer ||
-            current + 20u > buffer + R4_LINK_BUFFER_BYTES) return;
+        if (!r4_link_packet_span(buffer, current, 20u)) return;
         const uint32_t tag = psx_mod_read_word(current);
         if ((tag >> 24) == 4u &&
             (psx_mod_read_word(current + 4u) >> 24) == 0x65u) {
@@ -458,7 +622,7 @@ static void r4_link_place_retail_hud(uint32_t root, unsigned seats)
             }
         }
         const uint32_t next = tag & 0x00FFFFFFu;
-        if (next == 0x00FFFFFFu || next >= 0x00200000u) return;
+        if (next == 0x00FFFFFFu || next >= 0x00800000u) return;
         current = 0x80000000u | next;
     }
 }
@@ -477,8 +641,7 @@ static uint32_t r4_link_build_hud_overlay(uint32_t old, int clear_lower,
     const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
     uint32_t heap = psx_mod_read_word(0x1F800000u);
     const uint32_t fill = clear_lower ? 16u : 0u;
-    if ((heap & 3u) || heap < buffer ||
-        heap + 24u + fill > buffer + R4_LINK_BUFFER_BYTES) return 0;
+    if (!r4_link_packet_span(buffer, heap, 24u + fill)) return 0;
     const uint32_t y = r4_link_buffer_index() ? 240u : 0u;
     const uint32_t first = heap;
     if (clear_lower) {
@@ -532,15 +695,13 @@ static void r4_link_append_root_hud_overlay(uint32_t root, int paused)
     const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
     uint32_t current = root;
     for (unsigned steps = 0; steps < 32768u; ++steps) {
-        if ((current & 3u) || current < buffer ||
-            current >= buffer + R4_LINK_BUFFER_BYTES) return;
+        if (!r4_link_packet_span(buffer, current, 4u)) return;
         const uint32_t tag = psx_mod_read_word(current);
         const uint32_t next = tag & 0x00FFFFFFu;
         const uint32_t next_guest = 0x80000000u | next;
-        if (next == 0x00FFFFFFu || next_guest < buffer ||
-            next_guest >= buffer + R4_LINK_BUFFER_BYTES) {
+        if (next == 0x00FFFFFFu || !r4_link_packet_span(buffer, next_guest, 4u)) {
             if (next != 0x00FFFFFFu &&
-                ((next & 3u) || next >= 0x00200000u)) return;
+                ((next & 3u) || next >= 0x00800000u)) return;
             const uint32_t head = r4_link_build_hud_overlay(
                 next, 1, paused ? 136u : R4_LINK_VIEW_H, !paused);
             if (head)
@@ -565,15 +726,14 @@ static int r4_link_patch_first_clip(uint32_t root, unsigned view, unsigned seats
     r4_link_layout_viewport(seats, view, &rect);
     uint32_t current = root;
     for (unsigned steps = 0; steps < 32768u; ++steps) {
-        const int in_buffer = current >= buffer &&
-                              current + 4u <= buffer + R4_LINK_BUFFER_BYTES;
+        const int in_buffer = r4_link_packet_span(buffer, current, 4u);
         const int in_extra = current >= r4_link_extra_ot &&
                              current + 4u <= r4_link_extra_ot + R4_LINK_OT_ALLOC_BYTES;
         if ((current & 3u) || (!in_buffer && !in_extra)) return 0;
         const uint32_t tag = psx_mod_read_word(current);
         const unsigned words = tag >> 24;
         if (in_buffer && words >= 2u && words <= 0xFFu &&
-            current + 4u * (words + 1u) <= buffer + R4_LINK_BUFFER_BYTES) {
+            r4_link_packet_span(buffer, current, 4u * (words + 1u))) {
             for (unsigned i = 0; i + 1u < words; ++i) {
                 const uint32_t a = current + 4u * (i + 1u);
                 if ((psx_mod_read_word(a) >> 24) != 0xE3u ||
@@ -604,6 +764,7 @@ static void r4_link_prepare_viewport(unsigned seats, unsigned view)
         psx_mod_write_word(0x800A3D7Cu + 4u * r4_link_patched_viewport,
                            r4_link_saved_projection);
     }
+    r4_link_trails(view, 0);
     r4_link_viewport_record(index, &r4_link_saved_viewport);
     r4_link_saved_projection = psx_mod_read_word(0x800A3D7Cu + 4u * index);
     r4_link_layout_viewport(seats, view, &rect);
@@ -643,7 +804,7 @@ static void r4_link_patch_view_loop(unsigned seats)
 static int r4_link_session(void)
 {
     const char *probe = getenv("PSX_GAME_FILTER_OFFLINE_PROBE");
-    return r4_link_seats_ok(psx_netplay_seat_count()) ||
+    return r4_link_seats_ok(r4_battle_seat_count()) ||
            (probe && probe[0] == '1' && !probe[1]);
 }
 
@@ -688,10 +849,41 @@ static void r4_link_stage_commands(const uint32_t words[4])
     }
 }
 
+/* Native command bits 26/27/28 are rising-edge actions from the chosen
+ * preset's +8/+10/+14 masks (0x80029784 and 0x80029908). Camera +12 is
+ * normally handled only for the two local retail cars, outside that word. */
+static uint32_t r4_battle_button_actions(unsigned seat, const PsxNetPad *pad)
+{
+    if (!r4_battle_button_latches || seat >= 4u) return 0;
+    const uint16_t held = pad && pad->connected ? (uint16_t)~pad->buttons : 0;
+    const uint32_t latch = r4_battle_button_latches + 2u * seat;
+    const uint16_t edges = held & (uint16_t)~psx_mod_read_half(latch);
+    psx_mod_write_half(latch, held);
+    if (!edges || !pad) return 0;
+    const unsigned port = seat < 2u ? seat : 0u;
+    const uint32_t cfg = 0x800F3128u + port * 48u +
+                         (pad->analog == 3u ? 16u : 0u);
+    const uint16_t native_edges = (uint16_t)((edges << 8) | (edges >> 8));
+    uint32_t actions = 0;
+    if (native_edges & psx_mod_read_half(cfg + 8u)) actions |= 0x04000000u;
+    if (native_edges & psx_mod_read_half(cfg + 10u)) actions |= 0x08000000u;
+    if (native_edges & psx_mod_read_half(cfg + 14u)) actions |= 0x10000000u;
+    const uint32_t phase = psx_mod_read_word(0x800FF860u);
+    if ((native_edges & psx_mod_read_half(cfg + 12u)) &&
+        (phase == 2u || phase == 3u) && !psx_mod_read_byte(R4_LINK_PAUSED)) {
+        const uint32_t car = psx_mod_read_word(0x800FFDD0u + 4u * seat);
+        if ((car & 0xFFE00003u) == 0x80000000u)
+            psx_mod_write_half(car + 0x1E4u,
+                               psx_mod_read_half(car + 0x1E4u) ^ 0x100u);
+    }
+    return actions;
+}
+
 /* R4's default digital and DualShock control-preset command encoding. */
 static uint32_t r4_link_digital_command(unsigned seat, const PsxNetPad *pad)
 {
-    uint32_t word = pad && pad->analog ? 0x80000000u : 0x20000000u;
+    const uint32_t actions = r4_battle_button_actions(seat, pad);
+    uint32_t word = (pad && pad->analog ? 0x80000000u : 0x20000000u) | actions;
     if (!r4_link_brake_ramps) return word;
     uint8_t ramp = psx_mod_read_byte(r4_link_brake_ramps + seat);
     if (!pad || !pad->connected) {
@@ -715,7 +907,7 @@ static uint32_t r4_link_digital_command(unsigned seat, const PsxNetPad *pad)
         const uint32_t brk = pad->ry > 106u ? 0x73u : (pad->ry * 0x73u) / 106u;
         int d = (int)pad->lx - 128;
         int stick = 128 + (d * 127) / 44;
-        word = 0x80000000u | (gas << 8);
+        word = 0x80000000u | (gas << 8) | actions;
         if (brk > 4u) word |= (0x8Cu + brk) << 16;
         stick = stick < 0 ? 0 : (stick > 255 ? 255 : stick);
         return word | r4_link_analog_steering[stick];
@@ -737,7 +929,7 @@ static uint32_t r4_link_digital_command(unsigned seat, const PsxNetPad *pad)
 
 static int r4_link_stage_netplay_commands(void)
 {
-    const int seats = psx_netplay_seat_count();
+    const int seats = r4_battle_seat_count();
     if (!r4_link_seats_ok(seats)) return 0;
     uint32_t words[4] = {0x20000000u, 0x20000000u,
                          0x20000000u, 0x20000000u};
@@ -746,7 +938,7 @@ static int r4_link_stage_netplay_commands(void)
     uint8_t down_held = 0;
     for (int seat = 0; seat < seats; ++seat) {
         PsxNetPad pad;
-        if (!psx_netplay_sim_pad(seat, &pad)) return 0;
+        if (!r4_battle_pad(seat, &pad)) return 0;
         words[seat] = r4_link_digital_command((unsigned)seat, &pad);
         if (!pad.connected) continue;
         if (!(pad.buttons & 0x0008u))
@@ -781,6 +973,9 @@ static void r4_link_clear_serial_state(void)
     if (r4_link_brake_ramps)
         for (unsigned seat = 0; seat < 4; ++seat)
             psx_mod_write_byte(r4_link_brake_ramps + seat, 0);
+    if (r4_battle_button_latches)
+        for (unsigned seat = 0; seat < 4u; ++seat)
+            psx_mod_write_half(r4_battle_button_latches + 2u * seat, 0);
     psx_mod_write_byte(R4_LINK_PAUSE_LATCH, 0);
     psx_mod_write_byte(R4_LINK_MENU_DIRECTION_LATCH, 0);
     static const uint32_t words[] = {
@@ -840,7 +1035,7 @@ static void r4_link_present_local_view(unsigned seats)
  * the packet send) is left out. */
 #define R4_LINK_P1_CAR 0x800AC0B0u
 #define R4_LINK_CAR_BYTES 0x320u
-#define R4_LINK_LAP_TIMES 0x800F4E20u
+#define R4_LINK_TACHOMETERS 0x800F4E20u
 #define R4_LINK_PHASE 0x800FF860u
 #define R4_LINK_TICK 0x800F2F94u
 #define R4_LINK_VSYNC 0x8008B330u
@@ -954,14 +1149,19 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
     psx_mod_write_half(R4_LINK_ENTRANTS, 2u);
     psx_mod_write_half(0x1F80005Eu, 0u);
     r4_link_call(&call, 0x80021014u, 4u, 0);
-    /* The seat's car in the P1 object, its lap time in slot 0. The roster
+    /* The seat's car in the P1 object, its tachometer in slot 0. The roster
      * still lists every car, so every car is drawn where it is. */
     if (v->seat) {
         r4_link_swap_bytes(R4_LINK_P1_CAR, car_k, R4_LINK_CAR_BYTES);
-        const uint16_t lap0 = psx_mod_read_half(R4_LINK_LAP_TIMES);
-        psx_mod_write_half(R4_LINK_LAP_TIMES,
-                           psx_mod_read_half(R4_LINK_LAP_TIMES + 2u * v->seat));
-        psx_mod_write_half(R4_LINK_LAP_TIMES + 2u * v->seat, lap0);
+        if (v->seat == 1u) {
+            const uint16_t rpm0 = psx_mod_read_half(R4_LINK_TACHOMETERS);
+            psx_mod_write_half(R4_LINK_TACHOMETERS,
+                               psx_mod_read_half(R4_LINK_TACHOMETERS + 2u));
+            psx_mod_write_half(R4_LINK_TACHOMETERS + 2u, rpm0);
+        } else {
+            const int32_t rpm = (int32_t)psx_mod_read_word(R4_LINK_P1_CAR + 0x27Cu);
+            psx_mod_write_half(R4_LINK_TACHOMETERS, rpm < 500 ? 500u : (uint16_t)rpm);
+        }
     }
     const uint32_t car = R4_LINK_P1_CAR;
 
@@ -970,7 +1170,7 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
     if (phase - 1u < 3u) {
         /* HUD for one view (0x80115E84..F44, s4 = 1, s1 = 0, s2 = 1). */
         r4_link_call(&call, 0x800212E0u,
-                     (uint32_t)(int32_t)(int16_t)psx_mod_read_half(R4_LINK_LAP_TIMES), 0);
+                     (uint32_t)(int32_t)(int16_t)psx_mod_read_half(R4_LINK_TACHOMETERS), 0);
         r4_link_call(&call, 0x80021DDCu, 0, 0);
         r4_link_call(&call, 0x80021C38u, 0,
                      (uint32_t)(int32_t)(int16_t)psx_mod_read_half(car + 0x2AAu));
@@ -1075,7 +1275,8 @@ static void r4_link_test_spend(unsigned ms)
  * to its quadrant of the shared frame. */
 static void r4_link_local_view(struct CPUState *cpu)
 {
-    const int seats = psx_netplay_seat_count();
+    if (!psx_netplay_seat_count()) return; // local play presents all split views
+    const int seats = r4_battle_seat_count();
     const int slot = psx_netplay_local_slot();
     const uint32_t phase = psx_mod_read_word(R4_LINK_PHASE);
     R4LinkLocalView view;
@@ -1222,11 +1423,29 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
          (address == 0x80021960u && cpu->gpr[31] == 0x80115F24u)) &&
         r4_link_ready() && cpu->gpr[5] >= 2u && cpu->gpr[5] < 4u)
         cpu->gpr[5] &= 1u; /* valid HUD record, unchanged per-car value a0 */
-    if (address == 0x8006F00Cu && r4_link_ready() &&
-        r4_link_draw_view >= 2u && r4_link_draw_view < 4u)
-        cpu->gpr[4] &= 1u; /* course renderer has only two view indices */
+    if (address == 0x8002C194u && r4_link_ready() &&
+        cpu->gpr[31] == 0x80115F40u && cpu->gpr[5] >= 2u && cpu->gpr[5] < 4u)
+        cpu->gpr[5] = 1u; /* valid lower-row coordinates, linked into the HUD-copy OT */
+    if (address == 0x80017CB8u && cpu->gpr[31] == 0x80037554u &&
+        r4_link_ready() && r4_link_views_frame &&
+        r4_link_draw_view >= 2u && r4_link_draw_view < 4u &&
+        psx_mod_read_word(0x8010733Cu) == 1u) {
+        /* 0x800374F8 also selects its section from the retail pair. */
+        const uint32_t car = psx_mod_read_word(0x800FFDD0u + 4u * r4_link_draw_view);
+        cpu->gpr[4] = psx_mod_read_word(car + 0xF0u);
+    }
+    if (address == 0x8006F4ACu && r4_link_ready() &&
+        r4_link_views_frame && cpu->gpr[5] >= 2u && cpu->gpr[5] < 4u &&
+        psx_mod_read_word(0x8010733Cu)) {
+        /* The native visibility lookup uses P1 + 0x320 * index. Extra
+         * racers live in the roster, not beside P1/P2. Aliasing the index
+         * culls their roads against another racer's course segment. */
+        const uint32_t car = psx_mod_read_word(0x800FFDD0u + 4u * cpu->gpr[5]);
+        cpu->gpr[2] = psx_mod_read_word(car + 0xF0u);
+        return 1;
+    }
     if (address == 0x801157ECu && r4_link_ready() &&
-        psx_netplay_seat_count() == 2) {
+        r4_battle_seat_count() == 2) {
         /* Two entrants select the retail one-view layout, which draws only
          * the first car. Take the two-view branch (0x801157D0..E8) instead,
          * so every peer draws both seats' views: view flag 2, the two-view
@@ -1236,7 +1455,7 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
                            psx_mod_read_word(0x800ACDCCu) + 0xB70u);
         psx_mod_write_half(0x1F80005Eu, 1u);
     }
-    if (r4_link_ready() && psx_netplay_seat_count() == 2) {
+    if (r4_link_ready() && r4_battle_seat_count() == 2) {
         /* With exactly two entrants the HUD setup (0x8002094C, 0x80021014
          * at race init 0x8003D328) and the per-frame HUD OT pass
          * (0x80020A98 from 0x80115F7C) build the one-view HUD. Both peers
@@ -1255,31 +1474,28 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
         if (cpu->gpr[31] == 0x8001E808u) {
             r4_link_draw_view = 4;
             r4_link_place_retail_hud(cpu->gpr[4],
-                                     (unsigned)psx_netplay_seat_count());
+                                     (unsigned)r4_battle_seat_count());
             (void)r4_link_patch_first_clip(cpu->gpr[4], 0,
-                                            (unsigned)psx_netplay_seat_count());
+                                            (unsigned)r4_battle_seat_count());
         }
         if (cpu->gpr[31] == 0x8001E808u) {
-            const int seats = psx_netplay_seat_count();
+            const int seats = r4_battle_seat_count();
             if (seats == 3 || seats == 4)
                 r4_link_extract_view_env((unsigned)seats - 1u);
         }
         if (cpu->gpr[31] == 0x8001E828u) {
             r4_link_place_retail_hud(cpu->gpr[4],
-                                     (unsigned)psx_netplay_seat_count());
-            if (psx_netplay_seat_count() == 4 &&
-                r4_link_hud_end[3] >= r4_link_hud_start[3] &&
-                r4_link_hud_end[3] + 0x80u <=
-                    psx_mod_read_word(0x800ACDCCu) + R4_LINK_BUFFER_BYTES)
-                r4_link_hud_end[3] += 0x80u;
+                                     (unsigned)r4_battle_seat_count());
             r4_link_copy_hud_packets(cpu->gpr[4],
-                                     (unsigned)psx_netplay_seat_count());
+                                     (unsigned)r4_battle_seat_count());
+            r4_link_save_rank_tags();
             r4_link_unlink_extra_hud(cpu,
-                                     (unsigned)psx_netplay_seat_count());
-            r4_link_place_rank_packets((unsigned)psx_netplay_seat_count());
+                                     (unsigned)r4_battle_seat_count());
+            r4_link_place_rank_packets((unsigned)r4_battle_seat_count());
+            r4_link_place_unit_labels((unsigned)r4_battle_seat_count());
             (void)r4_link_patch_first_clip(cpu->gpr[4], 1,
-                                            (unsigned)psx_netplay_seat_count());
-            const unsigned seats = (unsigned)psx_netplay_seat_count();
+                                            (unsigned)r4_battle_seat_count());
+            const unsigned seats = (unsigned)r4_battle_seat_count();
             const int paused = psx_mod_read_byte(R4_LINK_PAUSED) != 0;
             if (seats == 2u || paused)
                 r4_link_append_root_hud_overlay(cpu->gpr[4], paused);
@@ -1289,6 +1505,7 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
         }
     }
     if (address == 0x80116024u && r4_link_patched_viewport) {
+        r4_link_trails(cpu->gpr[17], 1);
         r4_link_write_viewport_record(r4_link_patched_viewport,
                                        &r4_link_saved_viewport);
         psx_mod_write_word(0x800A3D7Cu + 4u * r4_link_patched_viewport,
@@ -1300,7 +1517,7 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
         }
     }
     if (address == 0x80115770u && r4_link_ready()) {
-        const int seats = psx_netplay_seat_count();
+        const int seats = r4_battle_seat_count();
         if (r4_link_seats_ok(seats)) {
             r4_link_views_frame = 1;
             r4_link_draw_view = 0;
@@ -1312,11 +1529,27 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
             r4_link_clear_extra_ots();
         }
     }
+    /* Close the last player's HUD range before the optional modern HUD
+     * filters out the native gauge call. Function filters can skip its entry. */
+    if (address == 0x80115F74u && r4_link_ready()) r4_link_hud_boundary(4);
     if (address == 0x80115F84u && r4_link_ready())
-        r4_link_prepare_viewport((unsigned)psx_netplay_seat_count(), 0);
+        r4_link_prepare_viewport((unsigned)r4_battle_seat_count(), 0);
     if (r4_link_ready()) {
-        if (address == 0x80021774u && cpu->gpr[5] < 4u)
+        if (address == 0x80021774u && cpu->gpr[5] < 4u) {
             r4_link_hud_boundary(cpu->gpr[5]);
+            /* Keep the packet boundary even when the host gauge replaces
+             * the native split-screen numeric RPM display. */
+            if (r4_race_hud_replaces_gauge()) return 1;
+            /* The tachometer has only two display records and smoothed
+             * values. Extra racers use their actual engine RPM (car + 0x27C,
+             * updated by 0x80023638), with the retail 500 RPM idle floor. */
+            if (cpu->gpr[5] >= 2u) {
+                const uint32_t car = psx_mod_read_word(0x800FFDD0u + 4u * cpu->gpr[5]);
+                const int32_t rpm = (int32_t)psx_mod_read_word(car + 0x27Cu);
+                cpu->gpr[4] = rpm < 500 ? 500u : (uint32_t)rpm;
+            }
+            cpu->gpr[5] &= 1u;
+        }
         if (address == 0x80021134u)
             r4_link_hud_boundary(4);
     }
@@ -1326,7 +1559,7 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
             r4_link_draw_view = view;
         if (view == 3u)
             r4_link_extract_view_env(2);
-        const int seats = psx_netplay_seat_count();
+        const int seats = r4_battle_seat_count();
         if (r4_link_extra_view_cameras && view >= 2u &&
             view < (unsigned)seats) {
             /* The retail draw loop assumes consecutive car structs and
@@ -1388,18 +1621,18 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
          * per seat, in seat order; the remaining slots stay inactive. */
         for (unsigned slot = 0; slot < 4; ++slot)
             psx_mod_write_byte(0x800AC074u + slot,
-                               (int)slot < psx_netplay_seat_count() ? 1 : 0);
+                               (int)slot < r4_battle_seat_count() ? 1 : 0);
         psx_mod_write_half(0x800FF838u, 2);
         return 0;
     }
     if ((address & 0x1FFFFFFFu) == 0x00115770u &&
-        psx_netplay_seat_count() < 4 && r4_link_ready() &&
+        r4_battle_seat_count() < 4 && r4_link_ready() &&
         psx_mod_read_half(0x800AC754u) == 4 &&
-        psx_mod_read_byte(0x800AC074u + (unsigned)psx_netplay_seat_count()) == 0) {
+        psx_mod_read_byte(0x800AC074u + (unsigned)r4_battle_seat_count()) == 0) {
         /* The original pair-local roster reserves four slots. Once R4 has
          * initialized the accepted cars (the first seat-count slots),
          * exclude the empty slots from race loops and ranking counts. */
-        psx_mod_write_half(0x800AC754u, (uint16_t)psx_netplay_seat_count());
+        psx_mod_write_half(0x800AC754u, (uint16_t)r4_battle_seat_count());
     }
     if (cpu && r4_link_ready() && cpu->gpr[4] == 0u &&
         (((address & 0x1FFFFFFFu) == 0x000970A0u &&
@@ -1407,12 +1640,17 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
            cpu->gpr[31] == 0x80114BBCu)) ||
          ((address & 0x1FFFFFFFu) == 0x00097060u &&
           (cpu->gpr[31] == 0x80114BE8u ||
-           cpu->gpr[31] == 0x80114BF4u)))) {
+           cpu->gpr[31] == 0x80114BF4u)) ||
+         ((address & 0x1FFFFFFFu) == 0x00097140u &&
+          (cpu->gpr[31] == 0x80114BCCu ||
+           cpu->gpr[31] == 0x80114BDCu)))) {
         /* Serial setup above leaves both SIO1 event handles zero. Retail
          * teardown passes them to DisableEvent/CloseEvent; OpenBIOS treats
          * handle zero as EvCB slot zero and frees the game's CD event. Keep
-         * that event alive for native Result -> Car & Course Change. */
-        cpu->gpr[2] = 1u;
+         * that event alive for native Result -> Car & Course Change. The
+         * two unopened serial file descriptors are also zero: close(0)
+         * must not be passed to close for an unopened serial device. */
+        cpu->gpr[2] = address == 0x80097140u ? 0u : 1u;
         return 1;
     }
     if (!r4_link_ready()) return 0;
@@ -1463,15 +1701,56 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
     case 0x00114C28u: /* ring, command buffers and status init */
         r4_link_clear_serial_state();
         return 1;
-    case 0x001155C4u: /* SIO1 ready handshake */
+    case 0x001155C4u: /* Accepted seat names normally arrive in the handshake. */
+        for (unsigned seat = 0; seat < 4u; ++seat) {
+            const char name[] = "PLAYER 1";
+            for (unsigned i = 0; i < 12u; ++i)
+                psx_mod_write_byte(0x8010C1B8u + 12u * seat + i,
+                    i == 7u ? (uint8_t)('1' + seat) : i < sizeof(name) ? (uint8_t)name[i] : 0u);
+        }
         return 1;
     default:
         return 0;
     }
 }
 
+static int r4_local_battle_filter(struct CPUState *cpu, uint32_t address)
+{
+    if (psx_netplay_seat_count() || getenv("PSX_GAME_FILTER_OFFLINE_PROBE")) return 0;
+    const unsigned mode = psx_mod_read_half(R4_LINK_MODE);
+    if (mode != 0u && mode != 4u) return 0;
+    if (mode == 0u && address != 0x8003535Cu && address != 0x8009B088u) return 0;
+    // Advertising an available extra menu entry must not auto-join a cable
+    // session. Report a connection only after an explicit local game choice.
+    if (mode == 0u && address == 0x8009B088u &&
+        (!r4_local_battle_config || !psx_mod_read_word(r4_local_battle_config + 4u))) return 0;
+    if (mode == 4u && r4_local_battle_config && psx_mod_read_word(r4_local_battle_config + 4u))
+        psx_mod_write_word(r4_local_battle_config + 4u, 0);
+    return r4_link_serial_filter(cpu, address);
+}
+static void r4_register_battle_hook(uint32_t address, PSXModFunctionFilterCallback callback)
+{
+    (void)psx_game_register_netplay_function_filter(address, callback);
+    (void)psx_game_register_function_filter(address, r4_local_battle_filter);
+}
+
+static void r4_battle_instruction(struct CPUState *cpu, uint32_t address)
+{
+    if (psx_netplay_seat_count() || getenv("PSX_GAME_FILTER_OFFLINE_PROBE"))
+        (void)r4_link_serial_filter(cpu, address);
+    else (void)r4_local_battle_filter(cpu, address);
+}
+
 PSX_MOD_CONSTRUCTOR(r4_link_netplay_register)
 {
+    (void)psx_game_set_local_input_count(4);
+    /* These are interior instructions, not function entries. Static and
+     * patched execution must perform the same per-view register updates. */
+    (void)psx_game_register_instruction(0x801157ECu, 0x3C02800Fu, r4_battle_instruction);
+    (void)psx_game_register_instruction(0x80115F74u, 0x0C00844Du, r4_battle_instruction);
+    (void)psx_game_register_instruction(0x80115F84u, 0x128000B3u, r4_battle_instruction);
+    (void)psx_game_register_instruction(0x80115FA8u, 0x866301E8u, r4_battle_instruction);
+    (void)psx_game_register_instruction(0x80116024u, 0x3C028010u, r4_battle_instruction);
     /* Online battle is on for every 2-4 seat netplay session (owner,
      * 2026-10-07: no experimental switch). Its memory is allocated at
      * startup, before anyone knows whether a link session follows: Expansion
@@ -1483,60 +1762,62 @@ PSX_MOD_CONSTRUCTOR(r4_link_netplay_register)
     r4_link_extra_ot = psx_mod_alloc_gpu_dma_memory(R4_LINK_OT_ALLOC_BYTES, 4);
     r4_link_frame_state =
         psx_mod_alloc_guest_memory(4u * R4_LINK_FRAME_STATE_WORDS, 4);
-    (void)psx_game_register_netplay_function_filter(
+    r4_local_battle_config = psx_mod_alloc_guest_memory(8, 4);
+    r4_battle_button_latches = psx_mod_alloc_guest_memory(8, 4);
+    r4_link_saved_rank_tags = psx_mod_alloc_guest_memory(52, 4);
+    r4_link_trail_views = psx_mod_alloc_guest_memory(4u * R4_TRAIL_VIEW_BYTES, 4);
+    (void)psx_game_register_function_entry(0x80013014u, r4_link_reset_trails);
+    (void)psx_game_register_function_entry(0x80093418u, r4_link_restore_rank_tags);
+    r4_register_battle_hook(
         0x8003535Cu, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x8009B088u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80035EA0u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80114AB8u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80114C28u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x800970A0u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80097060u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
+        0x80097140u, r4_link_serial_filter);
+    r4_register_battle_hook(
         0x801155C4u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80115520u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80115198u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80115310u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80115770u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
-        0x801157ECu, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x8002094Cu, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x8007807Cu, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
-        0x80115D90u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
-        0x80115F84u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
-        0x80115FA8u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
-        0x80116024u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80093520u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
-        0x8006F00Cu, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
+        0x8006F4ACu, r4_link_serial_filter);
+    r4_register_battle_hook(
+        0x80017CB8u, r4_link_serial_filter);
+    r4_register_battle_hook(
+        0x8002C194u, r4_link_serial_filter);
+    r4_register_battle_hook(
         0x80021774u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80021134u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80021A20u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80021BA4u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80021614u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         0x80021960u, r4_link_serial_filter);
-    (void)psx_game_register_netplay_function_filter(
+    r4_register_battle_hook(
         R4_LINK_VSYNC, r4_link_serial_filter);
 }

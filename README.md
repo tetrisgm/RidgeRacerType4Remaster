@@ -11,12 +11,18 @@ Version 0.2.3 is being prepared for Windows x64, Linux x64 and macOS Apple
 silicon. See [release notes](RELEASE_NOTES.md) and
 [current qualification status](docs/HANDOFF.md) before publishing a build.
 
-The custom R4 menu opens at startup and with **Select/Back** or Esc during play.
+The custom R4 menu replaces the main menu and supported offline race pause.
+**Start**, **Select/Back** or Esc opens it during a race.
 It includes display settings, Modern/Classic controls, keyboard/gamepad bindings,
 input devices, deadzones, mods and volume. Live settings apply immediately;
 restart-only changes are saved and labelled. PGXP stays enabled.
 
-Hold **Y/Triangle/F8** to rewind at gameplay resolution; release to resume.
+Local multiplayer supports **two to four players** on one screen: horizontal
+split for two, quadrants for three or four. Online play keeps a full-screen view
+per player. The optional **Modern race HUD** and **HD HUD textures** are separate
+Graphics options. See [local multiplayer](docs/LOCAL_MULTIPLAYER.md).
+
+With Modern controls, hold **Y/Triangle/F8** to rewind at gameplay resolution; release to resume.
 The right stick looks around and R1 changes view. The camera feedback and
 moving-car shaking are fixed. Native Mac DualSense and PC Steam Controller
 playtests passed; the owner accepted the camera and performance.
@@ -117,7 +123,7 @@ The compiled game needs your own disc to run.
 
 ### Rewind
 
-The current recovery uses upstream's filmstrip selector with HD residency
-preserved across restore. It does not use the old fork's hold-to-rewind pipeline.
-Rewind is unavailable in netplay. Historical phase-5 reports describe the old
-architecture and are not current instructions.
+Hold-to-rewind uses full-resolution rendering and resumes from the selected
+moment. Classic controls use Select + Y/Triangle; F8 works on the keyboard.
+Rewind is unavailable in local or online multiplayer. Historical phase-5
+reports describe an older architecture and are not current instructions.

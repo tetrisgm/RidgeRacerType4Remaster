@@ -30899,6 +30899,8 @@ void func_80017CB8(CPUState* cpu)
         }
     }
     debug_server_log_call_entry(0x80017CB8u);
+    if (psx_mod_function_entry(cpu, 0x80017CB8u)) return;  /* trusted opt-in game-mod hook */
+    if (psx_mod_try_function_replacement(cpu, 0x80017CB8u)) return;
     /* Address: 0x80017CB8, Size: 708 bytes, Blocks: 41 */
 
 block_80017CB8:

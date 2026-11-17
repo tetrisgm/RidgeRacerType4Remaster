@@ -1,59 +1,42 @@
 # Handoff
 
-## Current: unified menu first, then local 2–4-player split-screen
+## Current: unified menu, local split screen and issue review
 
-Owner approved menu work followed by local multiplayer. Online remains separate:
-one full-screen view per network player. Local play must work offline with 2–4
-controllers and shared split-screen, extending the existing two-player experience.
-Reuse player-state logic, not original link transport. Current online code replaces
-SIO1 receive bytes with synchronized seat commands; original RAM init is retained.
+Owner approved the menu redesign followed by offline 2–4-player split screen,
+then added the open GitHub issues. Keep single-player rewind, performance and
+controller fixes. Online remains separate, one full-screen view per peer.
 
-Menu scope: replace native race pause with Start/Select menu and original
-Restart/Retire actions; main-menu integration; consistent Back; snapshots separate
-from career saves; integrated file browsing; short controls/rewind + multiplayer
-intro (one visual-improvements bullet). No between-race/replay settings or
-controller-disconnect screen. Keyboard and controller coexist.
+Implemented: native main/race actions through the custom menu, Start/Select
+pause, consistent child Back, safe snapshots, embedded disc browser and first-run
+controls/multiplayer introduction. Local 2P uses native horizontal split; 3/4P
+uses independent quadrants, controllers, cameras and projected trail histories.
+Multiplayer rewind remains disabled. See [menu integration](MENU_INTEGRATION.md)
+and [local multiplayer](LOCAL_MULTIPLAYER.md) for implementation and receipts.
 
-Menu commits are local and unpushed: engine `f44bd952`, `24bda286`, `561942ca`;
-launcher `64a9004`, `713154b`, `60a7293`. Root integration and the local player picker are
-uncommitted. Snapshot navigation, native/custom Grand Prix Retire, Time Attack
-Restart and the first-launch layout pass. Full boot/menu/settings smoke passes
-at `analysis/menu-redesign-20261117-check5/` (zero misses); 19 UI and 45 runtime
-tests pass. See [menu integration](MENU_INTEGRATION.md).
+The contributed modern HUD was already merged. It is now exposed separately
+from HD HUD textures; fixed duplicate rank/RPM, P4 timer/map boundaries and
+copied-label anchoring. 2160-line visuals: local `probe45` (2P), `probe41` (3P),
+`probe46` (4P); `analysis/input-recovery-20261117/race.png` (1P). Four-player
+natural finish, Results and title return pass in `probe35` with zero misses.
+VBlank pacing is not proof of 60 rendered split-screen FPS.
 
-Local 3/4-player qualification is in progress. Four independently assigned virtual
-pads now drive their own cars offline, and R1 toggles only that seat's camera once
-per press. Fixed missing interior viewport hooks, expanded-heap traversal, two-seat
-HUD record overruns, and visibility lists incorrectly based on another car's course
-section. `analysis/local-four-player-20261117-probe17/` has fresh boot, independent
-camera tests, moving 2160-line views and 59.94 VBlanks/s with zero dispatch misses.
-The local grid uses native 4:3 framing; PGXP and Max Detail remain enabled. Current
-HUD cleanup restores each viewport's timer, units and extra racers' actual RPM.
+The final Release build, 45 runtime tests, 19 launcher tests and fresh full
+boot/menu/settings/race smoke pass: `analysis/menu-redesign-20261117-final11/`
+(7,157,625 static hits, zero misses). The rapid Resume-click regression failed
+on the old build's first cycle; all 30 corrected cycles pass in
+`analysis/menu-input-queue-20261117-fixed/`. Launcher `b1fd491` clears stale menu
+input and prevents a second close pass; the integrated smoke includes the case.
+A fresh 120-second 2160-line single-player performance/rewind check is running
+at `analysis/menu-local-20261117-performance/` before packaging.
 
-Three-player native completion passed in `analysis/local-four-player-20261117-probe19/`.
-Two-player entry and the three-player empty quadrant passed in `probe26/` and
-`probe28/` under the same local-four-player analysis prefix. Restart corruption
-was traced to persistent fixed HUD tags retaining pointers into an expired heap;
-tags are now restored before the next main frame. Fresh boot/restart and moving
-track images pass in `probe25/`, with 3,834 VBlanks / 63.966 seconds and zero misses.
-This measures native pacing, not 60 rendered split-screen frames per second.
+[Issue review](ISSUE_REVIEW_20261117.md): #110 has an invalid main-dispatch target
+but no identified build/reproduction; #111 virtual SDL reconnect/menu-release
+regression passes, not a reporter-hardware diagnosis. Raw attachments stay local
+under `analysis/issues-20261117/`. Do not declare these reports fixed or close them.
 
-Per-view taillight history now passes its unit test and initial tunnel-image
-checks (`probe33/tunnel-0.png`, `tunnel-35.png`); moving-car trail verification
-remains before claiming full visual qualification. Release build33 and 45 runtime
-tests pass; 19 UI tests pass. Final full menu/settings/race smoke passes at
-`analysis/menu-redesign-20261117-final3/` with zero dispatch misses.
-Four-player native race completion also passed (`probe31/drive.json`, phase 4,
-laps 4/3/3/3). Fresh build33 restart passed. These are not release packages.
-No current work is in the owner's desktop app. Online pause remains synchronized
-native behavior; multiplayer rewind retains the existing disabled policy.
-
-Owner added the open GitHub issues to this work. See [issue review](ISSUE_REVIEW_20261117.md).
-The HD HUD/PAL contribution is already merged, but the separate modern race HUD
-is missing from the curated Graphics menu. Crash #110 and input #111 are active
-investigations, not declared obsolete. Raw public crash attachments are local in
-`analysis/issues-20261117/`. Finish these alongside menu/local multiplayer;
-then final verification, coherent commits/pushes and packaging remain.
+Engine local commits: `f44bd952`, `24bda286`, `561942ca`; UI: `64a9004`,
+`713154b`, `60a7293`, `b1fd491`. Root integration is ready for commit. No current menu/local changes are in release packages or the owner's
+desktop app. Final coherent commits/pushes and cross-platform packaging remain.
 
 ## Previous release candidates
 

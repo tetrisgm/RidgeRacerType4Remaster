@@ -3,6 +3,7 @@
 // European disc SCES-01706. Built into the launcher through R4L_TITLE_SOURCE
 // (CMakeLists.txt).
 #include "r4l/title.h"
+#include "r4_menu_bridge.h"
 
 #include "imgui.h"
 #include "r4l/core/discfs.h"
@@ -36,9 +37,23 @@ const FeatureRef kGraphicsFeatures[] = {
     {"psx.enhancement.image-filtering", "image-filtering", "Image filtering"},
     {"r4.enhancement.widescreen", "widescreen", "Aspect", kFeatureOptionsOnly},
     {"r4.enhancement.max-detail", "max-detail", "Detail"},
-    {"r4.enhancement.ui-fonts", "ui-glyphs", "HD HUD", kFeatureToggleOnly},
+    {"r4.enhancement.ui-fonts", "ui-glyphs", "HD HUD textures", kFeatureToggleOnly},
+    {"r4.enhancement.race-hud", "race-hud", "Modern race HUD", kFeatureToggleOnly},
     {"r4.enhancement.car-effects", "car-effects", "Car effects", kFeatureToggleOnly},
     {"psx.enhancement.pgxp", "pgxp", "PGXP", kFeatureOptionsOnly | kFeatureRequired},
+};
+
+const TitleGameMode kGameModes[] = {
+    {"Grand Prix", 0x100u}, {"Time Attack", 0x200u}, {"Local multiplayer", 0x400u},
+    {"Garage", 0x800u}, {"Records", 0x1000u}, {"Career saves", 0x2000u},
+};
+
+const TitleNotice kIntroduction[] = {
+    {"Drive", "Modern controls: left stick steers; RT / R2 accelerates; LT / L2 brakes. X / Square shifts down; B / Circle shifts up.", nullptr},
+    {"Look and rewind", "Right stick looks around; RB / R1 changes the driving view. Hold Y / Triangle to rewind, then release to drive from that moment. Rewind is unavailable in multiplayer.", nullptr},
+    {"Keyboard and Classic", "Keyboard and controller work together. View or change bindings in Controls. Classic uses the original layout and Select + Y / Triangle for rewind.", nullptr},
+    {"Race together", "Online races support up to four players, each with their own full-screen view. Local VS Battle uses shared split-screen.", nullptr},
+    {"Visuals", "Higher-resolution rendering, corrected geometry and widescreen support.", nullptr},
 };
 
 const TitleNotice kNotices[] = {
@@ -213,6 +228,11 @@ const TitleLayer kR4 = {
     extract_r4_assets,
     draw_hero,
     "Ridge Racer Type 4 Recompiled",  // Add to Steam: library name
+    r4_menu_available, r4_menu_queue,
+    kGameModes, static_cast<int>(sizeof(kGameModes) / sizeof(kGameModes[0])),
+    kIntroduction, static_cast<int>(sizeof(kIntroduction) / sizeof(kIntroduction[0])),
+    r4_menu_status,
+    0x400u, r4_menu_local_game,
 };
 
 }  // namespace

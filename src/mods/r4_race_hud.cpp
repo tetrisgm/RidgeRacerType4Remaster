@@ -41,6 +41,9 @@ extern "C" {
 extern "C" int r4_pal_message_language(void);
 #endif
 
+extern "C" void r4_widescreen_tag_hud_copy(uint32_t buffer, uint32_t packet);
+extern "C" int r4_max_detail_draw_heap_contains(uint32_t buffer, uint32_t start, uint32_t end);
+
 #define PLUGIN_ID "r4.race-hud"
 
 namespace {
@@ -465,39 +468,47 @@ void draw_hud(int W, int H) {
  * speed, gear, rpm); no map and no lap times (kept for player 1 only). */
 void draw_hud_2p(int W, int H) {
     const Strings &tx = text_table();
-    const float s = g_s * 0.72f;
+    const int entrants = psx_mod_read_half(CAR_COUNT);
+    const bool grid = psx_mod_read_half(0x800F4EF4u) == 4u && entrants >= 3 && entrants <= 4;
+    const int players = grid ? entrants : 2;
+    const float s = g_s * (grid ? 0.56f : 0.72f);
+    const float grid_width = std::min((float)W, H * (4.f / 3.f));
+    const float grid_left = (W - grid_width) * 0.5f;
     const ImU32 white = rgba(255, 255, 255, 1), grey = rgba(255, 255, 255, 0.72f),
                 amber = IM_COL32(255, 176, 32, 255), red = IM_COL32(255, 59, 48, 255);
     ImDrawList *dl = ImGui::GetForegroundDrawList();
     const int laps = std::max(1, std::min(8, (int)r32(LAP_COUNT)));
     const float saved = g_s;
     g_s = s;
-    for (int j = 0; j < 2; ++j) {
-        const uint32_t car = CAR + CAR_BYTES * j;
-        const float y0 = H * 0.5f * j, y1 = y0 + H * 0.5f;
+    for (int j = 0; j < players; ++j) {
+        const uint32_t car = grid ? psx_mod_read_word(0x800FFDD0u + 4u * j) : CAR + CAR_BYTES * j;
+        const float x0 = grid ? grid_left + (j & 1) * grid_width * 0.5f : 0.f;
+        const float x1 = grid ? x0 + grid_width * 0.5f : (float)W;
+        const float y0 = H * 0.5f * (grid ? j / 2 : j), y1 = y0 + H * 0.5f;
+        dl->PushClipRect(ImVec2(x0, y0), ImVec2(x1, y1), true);
         const int lap = std::max(1, std::min(laps, (int)r16(car + 0x2AAu)));
         const int kmh = speed_shown(car), rpm = r32(car + 0x27Cu), gear = r16(car + 0x27Au);
 
         /* Top left of the view: player and lap */
-        panel(dl, ImVec2(20 * s, y0 + 16 * s), ImVec2(196 * s, y0 + 70 * s), s);
-        text(dl, SMALL, ImVec2(36 * s, y0 + 26 * s), j ? IM_COL32(34, 211, 238, 255) : amber,
-             j ? tx.player2 : tx.player1);
-        text(dl, SMALL, ImVec2(36 * s, y0 + 46 * s), grey, tx.lap);
-        text(dl, MEDIUM, ImVec2(180 * s, y0 + 40 * s), white,
+        panel(dl, ImVec2(x0 + 20 * s, y0 + 16 * s), ImVec2(x0 + 196 * s, y0 + 70 * s), s);
+        text(dl, SMALL, ImVec2(x0 + 36 * s, y0 + 26 * s), j ? IM_COL32(34, 211, 238, 255) : amber,
+             j == 0 ? tx.player1 : j == 1 ? tx.player2 : j == 2 ? "P3" : "P4");
+        text(dl, SMALL, ImVec2(x0 + 36 * s, y0 + 46 * s), grey, tx.lap);
+        text(dl, MEDIUM, ImVec2(x0 + 180 * s, y0 + 40 * s), white,
              std::to_string(lap) + " / " + std::to_string(laps), 1);
 
         /* Top right of the view: rank */
         const int cars = r16(CAR_COUNT);
         if (cars > 1 && cars <= 8) {
             const int rank = r16(car + CAR_RANK) + 1;
-            panel(dl, ImVec2(W - 150 * s, y0 + 16 * s), ImVec2(W - 20 * s, y0 + 70 * s), s);
-            text(dl, SMALL, ImVec2(W - 134 * s, y0 + 26 * s), grey, tx.position);
-            text(dl, MEDIUM, ImVec2(W - 36 * s, y0 + 40 * s), rank == 1 ? amber : white,
+            panel(dl, ImVec2(x1 - 150 * s, y0 + 16 * s), ImVec2(x1 - 20 * s, y0 + 70 * s), s);
+            text(dl, SMALL, ImVec2(x1 - 134 * s, y0 + 26 * s), grey, tx.position);
+            text(dl, MEDIUM, ImVec2(x1 - 36 * s, y0 + 40 * s), rank == 1 ? amber : white,
                  std::to_string(rank) + " / " + std::to_string(cars), 1);
         }
 
         /* Bottom right of the view: rpm arc, speed, gear */
-        const ImVec2 c(W - 110 * s, y1 - 100 * s);
+        const ImVec2 c(x1 - 110 * s, y1 - 100 * s);
         const float rr = 78 * s;
         dl->AddCircleFilled(c, 82 * s, rgba(8, 12, 18, 0.55f), 48);
         const float a0 = 3.14159f * 0.75f, a1 = 3.14159f * 2.25f;
@@ -513,6 +524,7 @@ void draw_hud_2p(int W, int H) {
         dl->AddRectFilled(ImVec2(c.x - 17 * s, c.y + 28 * s), ImVec2(c.x + 17 * s, c.y + 60 * s), amber, 7 * s);
         text(dl, MEDIUM, ImVec2(c.x, c.y + 32 * s), IM_COL32(11, 16, 22, 255),
              gear <= 0 ? std::string("N") : std::to_string(gear), 0.5f);
+        dl->PopClipRect();
     }
     g_s = saved;
 }
@@ -601,7 +613,6 @@ void hud_draw(int W, int H, void *) {
  *  - 0x80022048: toggles 0x8009EE68 (blink state);
  *  - 0x8002C0F8: stores the readout row in the HUD object (+0x226F6) that
  *    0x8002C194 reads; with 0x8002C194, a countdown readout this HUD lacks;
- *  - 0x80021774: five-digit figure this HUD does not show;
  *  - 0x8002258C: 104x16 sprite at the centre in race phases 1..3; nothing
  *    showed there in a Time Attack run, so no known replacement;
  *  - 0x80020A98 links the persistent label sprites; it is also the
@@ -626,7 +637,7 @@ enum : uint32_t {
  * speed, gear and lap, no map or lap times). */
 constexpr uint32_t k_full_screen = STOCK_NEEDLE | STOCK_GAUGE | STOCK_SPEED | STOCK_GEAR | STOCK_LAPS |
                                    STOCK_TIMES | STOCK_MAP | STOCK_RANK;
-constexpr uint32_t k_split_screen = STOCK_NEEDLE | STOCK_GAUGE | STOCK_SPEED | STOCK_GEAR | STOCK_LAPS;
+constexpr uint32_t k_split_screen = STOCK_NEEDLE | STOCK_GAUGE | STOCK_SPEED | STOCK_GEAR | STOCK_LAPS | STOCK_RANK;
 std::atomic<uint32_t> g_skip_mask{0xFFFFFFFFu};   /* debug command "r4.hud skip MASK" */
 
 int skip_stock(uint32_t element) {
@@ -646,6 +657,10 @@ int skip_stock(uint32_t element) {
 
 int skip_needle(CPUState *, uint32_t) { return skip_stock(STOCK_NEEDLE); }
 int skip_gauge(CPUState *, uint32_t) { return skip_stock(STOCK_GAUGE); }
+int skip_numeric_rpm(CPUState *, uint32_t) {
+    // The local Link Battle bridge records its packet boundary before skipping.
+    return psx_mod_read_half(0x800F4EF4u) == 4u ? 0 : skip_stock(STOCK_GAUGE);
+}
 int skip_speed(CPUState *, uint32_t) { return skip_stock(STOCK_SPEED); }
 int skip_gear(CPUState *, uint32_t) { return skip_stock(STOCK_GEAR); }
 int skip_laps(CPUState *, uint32_t) { return skip_stock(STOCK_LAPS); }
@@ -656,7 +671,7 @@ struct StockFilter { uint32_t address; PSXModFunctionFilterCallback fn; };
 const StockFilter k_stock_filters[] = {
     {0x800212E0u, skip_needle}, {0x80021134u, skip_gauge}, {0x80021614u, skip_speed},
     {0x80021960u, skip_gear},   {0x80021C38u, skip_laps},  {0x8002BEA4u, skip_times},
-    {0x80021DDCu, skip_map},
+    {0x80021DDCu, skip_map}, {0x80021774u, skip_numeric_rpm},
 };
 constexpr int k_stock_filter_count = (int)(sizeof k_stock_filters / sizeof k_stock_filters[0]);
 int s_stock_hooks;
@@ -669,11 +684,9 @@ int s_stock_hooks;
  * (slot -> +0x22688 -> ... -> the slot's previous contents). At DrawOTag,
  * before the GPU walks the table, the slot is pointed past the labels this
  * HUD replaces. The labels kept (TIME LIMIT, ...) stay linked in order; a kept
- * label whose successor changes is drawn from a copy in a tail entry the race
- * leaves empty, so the game's own packets are never modified and nothing has
- * to be restored: the slot is rebuilt next frame and the copy, unlinked, is
- * inert. Without a free entry the labels stay. The widescreen plugin's tail
- * walk anchors the copies like the originals. */
+ * label whose successor changes is copied into the bounded frame heap.
+ * Persistent packets are never modified: the slot is rebuilt next frame and
+ * the old heap copies become inert. Without heap space the labels stay. */
 constexpr uint32_t BUF0 = 0x800ADCA0u, BUF_STRIDE = 0x22778u;
 constexpr uint32_t OT1_SLOT = 0x70u, OT1_HEAD = 0xB6Cu, OT2_SLOT = 0xB70u, OT2_HEAD = 0x166Cu;
 constexpr uint32_t TAIL_FIRST = 0x22688u, TAIL_END = 0x22778u, TAIL_ENTRY = 20u;
@@ -690,16 +703,15 @@ const StockLabel k_stock_labels[] = {
     {231, 28, 12, 12, STOCK_TIMES},   /* F (before the record time) */
 };
 
-struct TailCopy { uint32_t address = 0; uint32_t words[5] = {}; };
-TailCopy s_copies[2][TAIL_ENTRIES];   /* per buffer: the copies last written */
 std::atomic<int> s_labels_hidden{0};  /* labels unlinked in the last frame (state) */
 
 uint32_t label_element(uint32_t packet) {
     const uint32_t tag = psx_mod_read_word(packet), code = psx_mod_read_word(packet + 4u);
     if ((tag >> 24) != 4u || (code >> 24) < 0x64u || (code >> 24) > 0x67u) return 0;   /* sprite */
     const uint32_t xy = psx_mod_read_word(packet + 8u), wh = psx_mod_read_word(packet + 16u);
+    const int y = split_screen() ? (int16_t)(xy >> 16) % 120 : (int16_t)(xy >> 16);
     for (const StockLabel &l : k_stock_labels)
-        if ((int16_t)xy == l.x && (int16_t)(xy >> 16) == l.y && (int16_t)wh == l.w && (int16_t)(wh >> 16) == l.h)
+        if ((int16_t)xy == l.x && y == l.y && (int16_t)wh == l.w && (int16_t)(wh >> 16) == l.h)
             return l.element;
     return 0;
 }
@@ -728,7 +740,7 @@ void unlink_stock_labels(CPUState *cpu, uint32_t) {
     uint32_t slot_word = psx_mod_read_word(slot);
     for (int step = 0; !entry(slot_word); ++step) {
         const uint32_t next = slot_word & 0xFFFFFFu;
-        if (step == 256 || next == 0xFFFFFFu || next >= 0x200000u || (next & 3u)) return;
+        if (step == 256 || next == 0xFFFFFFu || next >= 0x800000u || (next & 3u)) return;
         slot = 0x80000000u | next;
         slot_word = psx_mod_read_word(slot);
     }
@@ -757,29 +769,22 @@ void unlink_stock_labels(CPUState *cpu, uint32_t) {
         if ((psx_mod_read_word(kept[i]) & 0xFFFFFFu) != next) break;
         j = i;
     }
-    TailCopy *copies = s_copies[b];
+    /* Both native split-screen groups fill the fixed tail. Allocate kept
+     * predecessors in this frame's bounded primitive heap, so filtering
+     * never mutates persistent links or depends on spare fixed HUD slots. */
+    const uint32_t heap = psx_mod_read_word(0x1F800000u);
+    if (j && !r4_max_detail_draw_heap_contains(base, heap, heap + 20u * (uint32_t)j)) return;
     uint32_t to[TAIL_ENTRIES];
-    int nc = 0;
-    for (int e = 0; e < TAIL_ENTRIES && nc < j; ++e) {
-        if (in_chain[e]) continue;
-        const uint32_t a = first + TAIL_ENTRY * (uint32_t)e;
-        bool empty = true, ours = copies[e].address == a;
-        for (uint32_t w = 0; w < 5u; ++w) {
-            const uint32_t v = psx_mod_read_word(a + 4u * w);
-            empty = empty && v == 0u;
-            ours = ours && v == copies[e].words[w];
-        }
-        if (empty || ours) to[nc++] = a;
-    }
-    if (nc < j) return;   /* no room for the copies: keep the stock labels */
+    for (int i = 0; i < j; ++i) to[i] = heap + 20u * (uint32_t)i;
     for (int i = j - 1; i >= 0; --i) {
         const uint32_t next = i + 1 < j ? to[i + 1] : j < nk ? kept[j] : (0x80000000u | terminal);
-        TailCopy &c = copies[(to[i] - first) / TAIL_ENTRY];
-        c.address = to[i];
-        for (uint32_t w = 0; w < 5u; ++w) c.words[w] = psx_mod_read_word(kept[i] + 4u * w);
-        c.words[0] = (c.words[0] & 0xFF000000u) | (next & 0xFFFFFFu);
-        for (uint32_t w = 0; w < 5u; ++w) psx_mod_write_word(to[i] + 4u * w, c.words[w]);
+        for (uint32_t w = 0; w < 5u; ++w)
+            psx_mod_write_word(to[i] + 4u * w, psx_mod_read_word(kept[i] + 4u * w));
+        const uint32_t tag = psx_mod_read_word(to[i]);
+        psx_mod_write_word(to[i], (tag & 0xFF000000u) | (next & 0xFFFFFFu));
+        r4_widescreen_tag_hud_copy(base, to[i]);
     }
+    if (j) psx_mod_write_word(0x1F800000u, heap + 20u * (uint32_t)j);
     const uint32_t head = j > 0 ? to[0] : nk > 0 ? kept[0] : terminal;
     psx_mod_write_word(slot, (slot_word & 0xFF000000u) | (head & 0xFFFFFFu));
     s_labels_hidden.store(hidden, std::memory_order_relaxed);
@@ -813,6 +818,9 @@ int hud_command(const char *args, char *reply, int cap) {
 }
 
 }  // namespace
+extern "C" int r4_race_hud_replaces_rank(void) { return skip_stock(STOCK_RANK); }
+extern "C" int r4_race_hud_replaces_gauge(void) { return skip_stock(STOCK_GAUGE); }
+
 void r4_race_hud_bind() {
     psx_host_set_hud_draw_cb(hud_draw, nullptr);
 }

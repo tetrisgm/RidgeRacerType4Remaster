@@ -1,6 +1,6 @@
 {
   "game_id": "SLUS-00797",
-  "recipe_input_sha256": "6b096888509d82b103a79aa58d9dee8c77a8fd109c36710b88963685728abb7b",
+  "recipe_input_sha256": "abfab61500e86eb0cd482934f1bfbb54871280e7404a491660b59e35ebdf06d9",
   "recipe_count": 9,
   "all_pairs_valid": true,
   "all_guards_match_known_input_bytes": true,
@@ -65,15 +65,15 @@
   "published_variants": 7459,
   "files": {
     "overlays_static.c": "bab66c213824a43fcfbaf8e245124448071e1b3e16108057075b35c4ef35bb4a",
-    "overlays_static_0000.c": "b829737d2a94e9ed4c4935a3ef91dadd901f1b8e1c19b729813eb9188d1463b8",
-    "overlays_static_0001.c": "4171d95891ba90ebf6e11b1fe4cf588e88e7d64550af08a7d96fc91b9830bb41",
-    "overlays_static_0002.c": "1a45c007ab649effc5da22f5d78f03b868169c86641ed7abc6a9277177e2bfb7",
-    "overlays_static_0003.c": "482eabfcf396089cab8791909a06b31d72868ad7599e87ec5b3f71fd3d83545e",
-    "overlays_static_0004.c": "8894d7b0ef54d8f5d351f2cca29f00fc6c05c4b0b43cdfa95ce243afdca03d6d",
-    "overlays_static_0005.c": "03a7ded95c71ad39efc2f00c06adeb128a155d5a94859d2b6e3e7e1ea12a90a6",
-    "overlays_static_0006.c": "d69e5b270341ffcfd37afd4ffc819df318b319edd7e9e745d434bf95d254c8cf",
-    "overlays_static_0007.c": "cea23498047f8104353f374873645f921c05b0b7d45f3b8482f8486736a697cd",
-    "overlays_static_0008.c": "2014f326becc9e56daac5966aff9730062fd4c653f4c8df4a0a061730ebd1464"
+    "overlays_static_0000.c": "a6862cd354b69954ddbe6d87392609422f767cf8c7f961e171a2fc5125525cbc",
+    "overlays_static_0001.c": "50939e1650d6cdafbd0504289543860510979d310ea18f3bdeb92e5a3336afbf",
+    "overlays_static_0002.c": "d4a2ebeeb15bf6bf10d54378a00f525ebb9de0b1ae236bae875189b1dc050b2f",
+    "overlays_static_0003.c": "f362cfa4f3ae424f996650777731c47d09c2a965ce82b335cc6ffa62aa224bd7",
+    "overlays_static_0004.c": "b2773c9ff2b667b0fafe5b65464a1ca47c7523443de6df6f8189345abaea9669",
+    "overlays_static_0005.c": "991ec7194e93f60551cfb748cbf26e0acda59cea4b1a3cae703f1906f816ab35",
+    "overlays_static_0006.c": "9e0551aae08ff05b7ca68b175459dd0ff705ac37788a4fc3f481e86d125c6d41",
+    "overlays_static_0007.c": "f45f500dea9b076d89c4260ff75876f56a48eb90932c3b198be701f28c772ef4",
+    "overlays_static_0008.c": "d42363c269f8739f4d2b0d4ba8a122ae13f8976f6b944c486027da16b0012353"
   },
   "variants": [
     {
@@ -37390,12 +37390,12 @@
   "generation_inputs": {
     "schema": "psxrecomp AOT static generation inputs v1",
     "profile_sha256": "e53398fa9eee201c984cb20b259c8c2db4e7503516ac926abac5bd0e48316d82",
-    "game_toml_sha256": "fe3cbab7c2ce78c322969f8eec4a117bac3945899a8ac405f49fd95ba1c6cb95",
+    "game_toml_sha256": "66424eef198130f9b60e92dd6eaf823976deba5f3c735f9500ccdcb1abf973b8",
     "disc": {
       "sha1": "75f0dab5c1f71ba80f3d1e2fefd043f3f2b9ee2e"
     },
     "recompiler_sha256": "506f1e36015d29f3d8fd92bc155fb5c5a54a35f723db30a759c84b22a67c5b02",
-    "cache_tag": "cg18_e060fa62_gc32b49b96_f0",
+    "cache_tag": "cg18_e060fa62_gccdc2bfa4_f0",
     "cps": true,
     "gcc": "/usr/bin/gcc",
     "tools": {
@@ -37416,5 +37416,5 @@
     },
     "mod_packages": {}
   },
-  "generation_inputs_sha256": "fae9ea3ddf251eb60dd419c4cd06018c7ab584942b4d7ae74af188628c4c465c"
+  "generation_inputs_sha256": "0a55296920fb95f81339eb9adb78ff7f5665a757be5d60769a402d4a45afc99c"
 }

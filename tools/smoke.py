@@ -47,6 +47,11 @@ STEPS += [
 def wait_frames(n, port):
     target = cmd({"cmd": "frame"}, port=port).get("frame", 0) + n
     while cmd({"cmd": "frame"}, port=port).get("frame", 0) < target:
+        # The integrated main menu pauses the guest. Its first focused entry
+        # is Grand Prix; select that visible row through the host UI.
+        if cmd({"cmd": "menu_host"}, port=port).get("open"):
+            cmd({"cmd": "window_size", "w": 1280, "h": 720}, port=port)
+            cmd({"cmd": "host_mouse", "x": 180, "y": 163}, port=port)
         time.sleep(0.02)
 
 
@@ -71,6 +76,17 @@ def engage_widescreen(port):
     print(f"   widescreen mode={mode} (0 off, 2 native-wide)")
 
 
+def active_race(port):
+    def read(addr, size=4):
+        return int.from_bytes(bytes.fromhex(cmd({'cmd': 'read_ram',
+                              'addr': hex(addr), 'len': size}, port=port)['hex']), 'little')
+    major, minor = read(0x800F4E1A, 2), read(0x800F3BD6, 2)
+    if major > 4 or minor > 89:
+        return False
+    handler = read(read(0x8009EBCC + 4 * major) + 4 * minor)
+    return handler in (0x80114A38, 0x8011729C, 0x80114C30, 0x80115770) and read(0x800FF860) == 2
+
+
 def main():
     out = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "smoke")
     port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else DEFAULT_PORT
@@ -88,6 +104,12 @@ def main():
     wait_frames(max(0, START_FRAME - cmd({"cmd": "frame"}, port=port).get("frame", 0)), port)
     try:
         for i, (label, buttons, hold, settle) in enumerate(STEPS):
+            # Loading cadence varies across machines and graphics settings.
+            # Once driving starts, stop sending menu confirmations/Start and
+            # proceed to the measured driving steps instead of idling away
+            # the race's time limit or reopening its native pause menu.
+            if (label.startswith('gp-') or label.startswith('pre-')) and active_race(port):
+                continue
             if buttons:
                 cmd({"cmd": "set_input", "buttons": "0x%04X" % mask(buttons)}, port=port)
                 wait_frames(int(hold * 60), port)

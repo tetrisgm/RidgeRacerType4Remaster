@@ -1,6 +1,10 @@
 # Actual custom overlay over the game; an isolated profile is required.
 wait 12
 open 1
+seen intro:continue
+sleep 3.00
+tap intro:continue
+wait 6
 seen nav:Start Game
 seen nav:Options
 focused nav:Start Game

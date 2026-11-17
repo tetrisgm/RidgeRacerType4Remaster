@@ -570,3 +570,33 @@ Engine `055fc1c4` adds opt-in completed render-stage timing; it adds no fences
 when disabled. The private-target and split-blit experiments did not improve
 4K qualification and were removed. See [measured attribution](recovery/FRAME_RATE_20261110.md#completion-fenced-attribution-and-private-target-probe).
 Supported regeneration reuses the audited variants; generated C is unchanged.
+
+## 2026-11-17 — snapshot completion and menu navigation
+
+Engine `f44bd952` lets a menu keep its overlay open while a snapshot request
+reaches a safe boundary, then restores its pause and reports success/failure.
+Launcher `64a9004` returns from Save/Load to the parent menu, keeps saving in
+the menu, resumes only after a completed load, and browses discs inside the UI.
+19 launcher tests and 45 runtime tests pass; the isolated actual-game menu and
+boot-to-race check reports zero dispatch misses. Receipt:
+`analysis/menu-redesign-20261117-check1/menu/menu-check.json`.
+
+Engine `24bda286` adds always-active frontend entry callbacks while retaining the
+online-only hook gate. Launcher `713154b` adds title-owned action dispatch and the
+controls introduction. R4 registers its original main-menu choice handler in
+`game.toml`; regeneration adds that hook to the generated C. Root qualification
+and remaining work are tracked in [menu integration](MENU_INTEGRATION.md).
+
+Engine `561942ca` adds game-owned function filters and exact-word interior
+instruction hooks, plus four locally assigned input slots without changing guest
+Multitap topology. The static four-view loop now executes its viewport/camera
+adapters; regeneration covers all audited overlay variants. Launcher `60a7293`
+adds the local player-count picker and refines the introduction layout. Runtime
+45/45 and launcher 19/19 tests pass; local gameplay receipts and remaining checks
+are in [the handoff](HANDOFF.md).
+
+Launcher `b1fd491` clears queued menu input when returning to gameplay. Rapid
+Resume clicks previously survived closed frames and immediately closed the next
+Start opening. The old build fails the direct reproduction on its first cycle;
+the corrected build passes 30 cycles. 19 launcher and 45 runtime tests pass;
+`tools/check_ingame_menu.py` includes the regression.

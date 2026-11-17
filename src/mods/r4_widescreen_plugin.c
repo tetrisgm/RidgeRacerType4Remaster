@@ -29,6 +29,8 @@
  */
 #include "mod_plugins.h"
 #include "cpu_state.h"
+#include "psx_netplay.h"
+#include "gpu.h"
 #include "r4_widescreen_hud.h"
 #include "r4_pvs.h"
 #include "r4_widescreen_scene.h"
@@ -163,9 +165,18 @@ static uint32_t r4_buffer_base(int b) { return R4_BUF0 + (uint32_t)b * R4_BUF_ST
  * live every time (developer A/B). */
 static int s_scene_cache_on = 1, s_scene_valid = 0, s_scene_value = 0;
 
+static int r4_local_native_scene(void)
+{
+    return rd16(0x800F4EF4u) == 4u && !psx_netplay_active();
+}
+
 static int r4_race_scene_live(void)
 {
-    return s_enabled && r4_in_race(rd32, rd16);
+    /* Four local quadrants are one native-aspect frame. Global edge reveal
+     * and HUD anchors belong to a single full-screen camera; applying them
+     * here overlaps neighboring views. Online own-view draws still widen. */
+    return s_enabled && !r4_local_native_scene() &&
+           r4_in_race(rd32, rd16);
 }
 
 static void r4_ws_vblank(void)
@@ -189,7 +200,7 @@ static int r4_race_scene(void)
 /* Callbacks do work only in a widened race. */
 static int r4_ws_live(void)
 {
-    return s_enabled && ws_margin() > 0 && r4_in_race(rd32, rd16);
+    return ws_margin() > 0 && r4_race_scene_live();
 }
 
 /* ---- HUD ----------------------------------------------------------------- */
@@ -250,6 +261,17 @@ static void r4_hud_tag(void *ctx, uint32_t key, int edge)
     ws_tag(key, edge);
     if (bt->nkeys < R4_WS_KEYS_MAX) bt->keys[bt->nkeys++] = key;
     s_stat.tags++;
+}
+
+/* Host HUD filtering may copy a persistent label into the frame heap.
+ * Track its anchor with the normal per-buffer lifetime so reused heap packets
+ * cannot inherit an old screen-space role. */
+void r4_widescreen_tag_hud_copy(uint32_t buffer, uint32_t packet)
+{
+    const int b = r4_buffer_index(buffer);
+    if (!s_enabled || b < 0 || !r4_ws_live()) return;
+    const int x = (int16_t)rd32(packet + 8u);
+    r4_hud_tag(&s_buf[b], packet, r4_hud_edge_for_x(x));
 }
 
 static void r4_ws_trace_frame(uint32_t buf);
@@ -409,6 +431,7 @@ static void r4_widescreen_activate(void)
     s_scene_cache_on = env ? env[0] != '0' : 1;
     s_scene_valid = 0;
     psx_mod_set_world_scene_predicate(r4_race_scene);
+    gpu_ws_set_native_scene_predicate(r4_local_native_scene);
     if (s_hooks_registered != R4_WS_HOOK_COUNT)
         fprintf(stderr, "[r4-ws] only %d of %d entry hooks registered\n",
                 s_hooks_registered, (int)R4_WS_HOOK_COUNT);

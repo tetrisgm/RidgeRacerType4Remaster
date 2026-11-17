@@ -1,4 +1,4 @@
-/* r4_split_screen_rewind.c - no local Rewind in 2P VS Battle
+/* r4_split_screen_rewind.c - no local Rewind in multiplayer
  * (r4.modern-controls / split-screen-rewind).
  *
  * Owner rule: no Rewind in multiplayer or split screen. Netplay already
@@ -30,7 +30,8 @@ static uint16_t r4_ssr_read_half(uint32_t address) {
 
 static void r4_ssr_update(void) {
     psx_mod_set_rewind_blocked(
-        r4_vs_session(r4_ssr_read_word, r4_ssr_read_half));
+        r4_vs_session(r4_ssr_read_word, r4_ssr_read_half) ||
+        r4_ssr_read_half(0x800F4EF4u) == 4u);
 }
 
 PSX_MOD_CONSTRUCTOR(r4_split_screen_rewind_register) {
