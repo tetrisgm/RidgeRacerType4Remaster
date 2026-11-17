@@ -6,7 +6,7 @@ import time
 from dbg import cmd
 
 
-def check_menu(output, port):
+def check_menu(output, port, *, input_settle_seconds=.25):
     output = Path(output)
     output.mkdir(exist_ok=True)
     def call(command, **args):
@@ -29,14 +29,24 @@ def check_menu(output, port):
         (output / 'failure.json').write_text(json.dumps(failure, indent=2))
         raise RuntimeError(f'Timed out waiting for custom menu operation: {failure}')
     def state(opened):
-        return until(lambda: (s if s['open'] == opened else None)
-                     if (s := call('menu_host')) else None)
+        def settled():
+            s = call('menu_host')
+            if s['open'] != opened:
+                return None
+            # The render thread posts pause intent; the guest thread applies
+            # it on its next poll. Visibility alone is not its acknowledgement.
+            if not s['netplay'] and (s['paused'] != opened or s['pause_depth'] != opened):
+                return None
+            if not opened and s['ui_capture']:
+                return None
+            return s
+        return until(settled)
     def click(x, y):
         call('host_mouse', x=x, y=y)
-        time.sleep(.25)
+        time.sleep(input_settle_seconds)
     def back():
         call('host_button', name='back')
-        time.sleep(.25)
+        time.sleep(input_settle_seconds)
     def shot(name):
         seq = call('present_shot_seq')['seq']
         call('present_shot', path=str((output / name).resolve()))

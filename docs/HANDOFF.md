@@ -1,90 +1,68 @@
 # Handoff
 
-## Current: unified menu, local split screen and issue review
+## Current candidate
 
-Owner approved the menu redesign followed by offline 2–4-player split screen,
-then added the open GitHub issues. Keep single-player rewind, performance and
-controller fixes. Online remains separate, one full-screen view per peer.
+Menu/local multiplayer integration is committed and pushed as `8d4557ff`.
+Engine pin: `561942ca`; launcher pin: `b1fd491`. No public release/feed was
+published. No owner desktop app or player data was changed.
 
-Implemented: native main/race actions through the custom menu, Start/Select
-pause, consistent child Back, safe snapshots, embedded disc browser and first-run
-controls/multiplayer introduction. Local 2P uses native horizontal split; 3/4P
-uses independent quadrants, controllers, cameras and projected trail histories.
-Multiplayer rewind remains disabled. See [menu integration](MENU_INTEGRATION.md)
-and [local multiplayer](LOCAL_MULTIPLAYER.md) for implementation and receipts.
+Implemented: unified native main/race actions, Start/Select pause, consistent
+Back and snapshot navigation, embedded disc selection, first-run controls,
+offline 2–4-player split screen, and optional Modern race HUD. Fixed stale
+Resume clicks reopening/closing the menu, duplicate split-screen rank/RPM,
+missing P4 timer/map, persistent HUD tags and cross-viewport taillight history.
+See [menu integration](MENU_INTEGRATION.md), [local multiplayer](LOCAL_MULTIPLAYER.md)
+and [issue review](ISSUE_REVIEW_20261117.md).
 
-The contributed modern HUD was already merged. It is now exposed separately
-from HD HUD textures; fixed duplicate rank/RPM, P4 timer/map boundaries and
-copied-label anchoring. 2160-line visuals: local `probe45` (2P), `probe41` (3P),
-`probe46` (4P); `analysis/input-recovery-20261117/race.png` (1P). Four-player
-natural finish, Results and title return pass in `probe35` with zero misses.
-VBlank pacing is not proof of 60 rendered split-screen FPS.
+## Verification
 
-The final Release build, 45 runtime tests, 19 launcher tests and fresh full
-boot/menu/settings/race smoke pass: `analysis/menu-redesign-20261117-final11/`
-(7,157,625 static hits, zero misses). The rapid Resume-click regression failed
-on the old build's first cycle; all 30 corrected cycles pass in
-`analysis/menu-input-queue-20261117-fixed/`. Launcher `b1fd491` clears stale menu
-input and prevents a second close pass; the integrated smoke includes the case.
-A fresh 120-second 2160-line single-player performance/rewind check is running
-at `analysis/menu-local-20261117-performance/` before packaging.
+- Release build, 45 runtime tests, 19 launcher tests and fresh menu/race smoke
+  pass. `analysis/menu-redesign-20261117-final11/`: 7,157,625 static hits, zero
+  dispatch misses. The pause-acknowledgement checker also passes in
+  `analysis/menu-local-20261117-final-ack/` (7,173,882 hits, zero misses).
+  `menu-input-queue-20261117-fixed/`: 30 rapid-click cycles pass;
+  the old build failed its first cycle.
+- `analysis/menu-local-20261117-performance/`: native Mac 2160 lines, rewind on,
+  120 seconds, 59.97 VBlanks/s, all 3,599 requested intermediate frames rendered.
+  Three observed rewind releases: 46–64 ms. Longest sampled frame: 63 ms.
+  Finite-route evidence, not a hitch-free/all-course or split-screen 60-FPS claim.
+- Modern/Classic virtual SDL acceleration, braking, menu return and reconnect
+  pass in `analysis/input-recovery[-classic]-20261117/`.
+- `analysis/issue110-courses-20261117/`: Wonderhill and Edge of the Earth load
+  in Time Attack at 2160 lines with zero misses. This does not reproduce the
+  reporter's exact mode/progression; #110/#111 remain unconfirmed.
+- Local views, independent inputs/cameras, restart, natural finish and Results/
+  title return receipts are in [local multiplayer](LOCAL_MULTIPLAYER.md).
 
-[Issue review](ISSUE_REVIEW_20261117.md): #110 has an invalid main-dispatch target
-but no identified build/reproduction; #111 virtual SDL reconnect/menu-release
-regression passes, not a reporter-hardware diagnosis. Raw attachments stay local
-under `analysis/issues-20261117/`. Do not declare these reports fixed or close them.
+## Packages and remaining checks
 
-Engine local commits: `f44bd952`, `24bda286`, `561942ca`; UI: `64a9004`,
-`713154b`, `60a7293`, `b1fd491`. Root integration is ready for commit. No current menu/local changes are in release packages or the owner's
-desktop app. Final coherent commits/pushes and cross-platform packaging remain.
+All source packages use `0.2.3-menu-local-20261117-rc1` under `dist/macos`,
+`dist/windows` and `dist/linux`. Archives are under
+`dist/releases/0.2.3-menu-local-20261117-rc1/`.
 
-## Previous release candidates
+- Mac: Developer-ID signed, notarized, stapled and Gatekeeper accepted. Notary
+  `783a763d-025f-4d54-a88c-cb431838583c`. Actual bundle menu/race check passes:
+  `analysis/menu-local-20261117-mac-bundle/`, zero misses.
+- Windows: PE/import/checksum audits pass. CrossOver-on-Mac full menu/race check
+  passes at native internal resolution, zero misses:
+  `analysis/menu-local-20261117-windows-compat/`. The earlier high-resolution
+  translated run hit its 240-second limit; it is not a pass or native PC timing.
+- Linux: pinned Steam Runtime SDK build; ELF, glibc 2.31 baseline, dependency
+  and checksum audits pass. QEMU/software-GL direct-race check passes driving,
+  hold/release rewind, pause/resume and snapshot save/load with zero misses:
+  `analysis/menu-local-20261117-linux-race-c/result.json`. This uses a checkpoint
+  at native internal resolution, not full boot or native GPU qualification.
+  Full-boot attempts timed out. The direct-race checker needed actual guest
+  pause acknowledgement and one second between UI inputs on the translated
+  software renderer; earlier failures are retained alongside the passing receipt.
+- Current additions still need native Windows/Linux GPU and audio listening
+  acceptance. PAL runtime qualification lacks a matching disc. Do not claim
+  the unresolved public reports fixed. Older manual snapshots may be incompatible
+  with the expanded local-player state; preserve old apps/snapshots and career cards.
 
-Owner accepted the camera/car-motion fixes and performance, and confirmed normal
-DualSense input. Runtime fix: `040a3455`; packaging: `55e3f5a2`.
-[Camera analysis and verification](recovery/CAMERA_MOTION_FIX_20261116.md).
-Release build, 45/45 CTests and hidden menu/settings/race smoke pass.
+The owner's `~/Desktop/R4.app` still points to
+`~/Applications/R4-0.2.3-CameraFix/R4.app`; leave it alone. Prior candidate details
+are retained in commit `8d4557ff` and `analysis/release-023-final/`.
 
-Mac native owner-control timing: 59.94 VBlanks/s. Native Windows corrected build:
-59.96 VBlanks/s at 2160 lines; moving camera, three rewind releases (67–78 ms
-including input observation) and Select/Back pass; zero dispatch misses.
-PC tunnel/sky/road images inspected without observed seams or misplaced HUD.
-Temporary PC tasks and test folders were removed; no security exception needed.
-
-## Artifacts and remaining checks
-
-- Final archives: `dist/releases/0.2.3/`. All three archives are prepared. Linux menu, direct race, Y hold/release and
-  Back passed under Rosetta/software GL. Its full boot smoke hit the VM timeout;
-  native desktop/Linux GPU qualification is still outstanding.
-- Mac source package: `dist/macos/0.2.3-final`. Developer-ID signed, notarized,
-  stapled and accepted by Gatekeeper. Notary ID
-  `84b9eea4-71fe-4ef4-a92c-ba374bb5cce1`.
-- Windows source package: `dist/windows/0.2.3-release`. Exact tested executable;
-  unsigned. Old top-level Windows ZIP and PC Steam installation predate this fix.
-- Audio listening acceptance remains outstanding; all automated runs are muted.
-  Owner was asked to raise the in-game volume and confirm music/engine sounds.
-- Linux testing in a translated local VM establishes compatibility, not native
-  GPU/Steam Deck performance. Do not claim that performance was verified.
-- No public release or feed was published. NAS is unrelated and untouched.
-
-## Owner playtest — leave it alone
-
-`~/Desktop/R4.app` points to `~/Applications/R4-0.2.3-CameraFix/R4.app`.
-It is the corrected signed playtest, not the final notarized archive above.
-Owner controls the app (PID 66841 when handed back; debug port 4799). No test
-driver or virtual pad remains. Player 1 is auto; volume is zero. Player data:
-`~/Library/Application Support/net.ramine.r4recomp/`. Do not stop the owner's app.
-
-## Evidence and references
-
-- `analysis/release-023-final/`: notarization, PC receipts and route images.
-- `analysis/linux-final-023-race-c/result.json`: passing Linux compatibility
-  check at native internal resolution; `linux-final-023-smoke-b` records menu
-  success followed by the full-boot timeout. No Linux 4K performance claim.
-- `analysis/camera-fix-visible-20261116/release-qualification.json`.
-- `analysis/camera-shake-20261116/owner-control-timing.json`.
-- `analysis/mac-final-023-bundle/native-overlay-check.json`: 7,179,901 static
-  overlay hits, zero misses in the signed bundle.
-- [Mac workflow](MAC_BUILD.md), [Windows workflow](WINDOWS_BUILD.md),
-  [Linux workflow](STEAM_DECK.md), [upstream tracking](UPSTREAM.md).
-- [Prior handoff](archive/HANDOFF_BEFORE_CAMERA_FIX_20261116.md).
+All three archives have verified SHA256 manifests under the release folder.
+The task-started Colima VM is stopped again; Docker context is restored to `default`.
