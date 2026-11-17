@@ -115,6 +115,8 @@ int main(void) {
     assert(yaw < 0.0f && fabsf(yaw + PI * 0.5f) < 0.0001f);
     target(255, 128, &yaw, &pitch);
     assert(yaw > 0.0f && fabsf(yaw - PI * 0.5f) < 0.0001f);
+    target(128, 192, &yaw, &pitch); /* half travel reaches the rear */
+    assert(fabsf(yaw - PI) < 0.0001f && pitch == 0.0f);
     target(128, 255, &yaw, &pitch);
     assert(fabsf(yaw - PI) < 0.0001f && pitch == 0.0f);
     target(131, 255, &yaw, &pitch); /* down-stick rear target resists small X drift */

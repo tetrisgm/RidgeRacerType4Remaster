@@ -207,7 +207,8 @@ static void test_scene(void)
     CHECK(r4_frame_handler(rd, rdh) == 0x8011729Cu, "handler lookup follows the main loop");
     CHECK(r4_in_race(rd, rdh) == 1, "overlay 660 race with its code resident");
     wr(R4_RACE_PHASE_ADDR, 4);
-    CHECK(r4_in_race(rd, rdh) == 0, "phase 4 (finish/results) stays 4:3");
+    CHECK(r4_in_race(rd, rdh) == 0, "finish is not live player control");
+    CHECK(r4_in_race_view(rd, rdh) == 1, "finish coast keeps the race aspect");
     wr(R4_RACE_PHASE_ADDR, 0);
     CHECK(r4_in_race(rd, rdh) == 1, "phase 0 fly-by widens");
     wr(0x801172A0u, 0x00000000u);

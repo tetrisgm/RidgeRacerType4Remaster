@@ -71,7 +71,11 @@ static inline void r4_camera_look_target(uint8_t right_x, uint8_t right_y,
         return;
     }
 
-    const float reach = (radius - deadzone) / (1.0f - deadzone);
+    /* Rear look reaches full travel at half stick deflection. Blend by
+     * direction so purely lateral input retains its original response. */
+    const float rear_weight = y > 0.0f ? y / radius : 0.0f;
+    const float full_travel = fmaxf(deadzone + 0.01f, 1.0f - 0.5f * rear_weight);
+    const float reach = fminf(1.0f, (radius - deadzone) / (full_travel - deadzone));
     const float scale = reach / radius;
     x *= scale;
     y *= scale;

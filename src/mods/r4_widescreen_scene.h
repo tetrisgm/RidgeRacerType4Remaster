@@ -80,6 +80,13 @@ static inline int r4_in_race(R4SceneReadWord rd, R4SceneReadHalf rh)
     return r4_is_race_handler(rd, r4_frame_handler(rd, rh));
 }
 
+/* Presentation stays wide through the finish coast and replay. Input and
+ * simulation policies continue to use r4_in_race's active-phase gate. */
+static inline int r4_in_race_view(R4SceneReadWord rd, R4SceneReadHalf rh)
+{
+    return r4_is_race_handler(rd, r4_frame_handler(rd, rh));
+}
+
 /* 2P VS Battle (split screen). The main menu stores the mode it starts in
  * the s16 at 0x800F4EDC (0x8002F7A0, copied from the menu cursor
  * 0x800AC802 on confirm; zeroed once at boot, 0x8002EFC8): 2 is VS Battle. It

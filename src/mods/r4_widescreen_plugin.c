@@ -176,7 +176,7 @@ static int r4_race_scene_live(void)
      * and HUD anchors belong to a single full-screen camera; applying them
      * here overlaps neighboring views. Online own-view draws still widen. */
     return s_enabled && !r4_local_native_scene() &&
-           r4_in_race(rd32, rd16);
+           r4_in_race_view(rd32, rd16);
 }
 
 static void r4_ws_vblank(void)
@@ -374,7 +374,7 @@ static void r4_ws_trace_frame(uint32_t buf)
     }
     uint32_t handler = r4_frame_handler(rd32, rd16);
     uint32_t phase = rd32(R4_RACE_PHASE_ADDR);
-    int race = r4_in_race(rd32, rd16);
+    int race = r4_in_race_view(rd32, rd16);
     if (handler != s_stat.last_handler || race != s_stat.last_race ||
         (phase >= 4u) != (s_stat.last_phase >= 4u)) {
         fprintf(stdout, "[r4-ws] scene: major=%u minor=%u handler=%08X phase=%u race=%d\n",

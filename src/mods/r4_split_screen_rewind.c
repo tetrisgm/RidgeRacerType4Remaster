@@ -31,7 +31,10 @@ static uint16_t r4_ssr_read_half(uint32_t address) {
 static void r4_ssr_update(void) {
     psx_mod_set_rewind_blocked(
         r4_vs_session(r4_ssr_read_word, r4_ssr_read_half) ||
-        r4_ssr_read_half(0x800F4EF4u) == 4u);
+        r4_ssr_read_half(0x800F4EF4u) == 4u ||
+        r4_frame_handler(r4_ssr_read_word, r4_ssr_read_half) == 0x8002A464u ||
+        r4_frame_handler(r4_ssr_read_word, r4_ssr_read_half) == 0x8005E118u ||
+        r4_ssr_read_word(R4_RACE_PHASE_ADDR) >= 4u);
 }
 
 PSX_MOD_CONSTRUCTOR(r4_split_screen_rewind_register) {
