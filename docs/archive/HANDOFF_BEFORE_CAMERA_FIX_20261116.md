@@ -92,12 +92,12 @@ No security exception was added for these permanent installs. Setup receipts:
 
 ## References
 
-- [Fix and evidence](recovery/REWIND_RELEASE_FIX_20261112.md)
-- [Mac receipt](recovery/MAC_RELEASE_20261112.json)
-- [Windows receipt](recovery/WINDOWS_RELEASE_20261112.json)
-- [Release notes](../RELEASE_NOTES.md)
-- [Rewind](REWIND_PLAYBACK.md) / [pins](framework_pin_history.md)
-- [Mac workflow](MAC_BUILD.md) / [Windows workflow](WINDOWS_BUILD.md)
+- [Fix and evidence](../recovery/REWIND_RELEASE_FIX_20261112.md)
+- [Mac receipt](../recovery/MAC_RELEASE_20261112.json)
+- [Windows receipt](../recovery/WINDOWS_RELEASE_20261112.json)
+- [Release notes](../../RELEASE_NOTES.md)
+- [Rewind](../REWIND_PLAYBACK.md) / [pins](../framework_pin_history.md)
+- [Mac workflow](../MAC_BUILD.md) / [Windows workflow](../WINDOWS_BUILD.md)
 
 Current grid: `analysis/rewind-release-grid-20261112/memcards`, execution identity
 `f3a59eb52c450e6d9f22c0cd78332c02932ca5ef11cbc3c5ffeb9787b8bb9135`.
