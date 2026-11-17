@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -116,7 +117,7 @@ def main():
                                timeout=240, check=True)
             receipt = {name: cmd({'cmd': name}, port=args.port)
                        for name in ('frame', 'overlay_loader_status', 'dispatch_stats', 'dirty_ram_stats')}
-            receipt['execution_host'] = 'CrossOver on macOS; not native Windows' if args.crossover_bottle else 'native macOS'
+            receipt['execution_host'] = 'CrossOver on macOS; not native Windows' if args.crossover_bottle else f'{platform.system()} on {platform.machine()}'
             receipt['binary_sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
             receipt['overlay_fallback'] = cmd({'cmd': 'dirty_ram_stats', 'lo': '0x801149a8',
                                                 'hi': '0x801281a8'}, port=args.port)

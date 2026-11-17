@@ -147,7 +147,7 @@ enabled = true
     start = delivery / 'Start R4.command'
     start.write_text('#!/bin/zsh\ncd -- "${0:A:h}/R4.app/Contents/MacOS"\nexec ./r4-runtime "$@"\n')
     start.chmod(0o755)
-    (stage / 'README.txt').write_text('''R4 — Apple Silicon Mac release candidate
+    (stage / 'README.txt').write_text('''R4 — macOS (Apple silicon)
 
 Open R4.app (or Start R4.command) and choose your own USA disc. The app can live in Applications; player data is stored in
 ~/Library/Application Support/net.ramine.r4recomp/. No game data, retail BIOS, saves, compiler or SDK is

@@ -146,35 +146,21 @@ enabled = true
         ['git', '-C', str(ROOT), 'status', '--porcelain', '--untracked-files=no'], text=True))
     revisions['toolchain'] = args.toolchain.name
     (stage / 'BUILD.json').write_text(json.dumps(revisions, indent=2) + '\n')
-    (stage / 'README.txt').write_text('''R4 Windows x64 — portable owner playtest build.
+    (stage / 'README.txt').write_text('''R4 — Windows x64
 
-Cross-built on the Mac; native Windows playtesting remains required. Windows 11 supplies
-all imported system/UCRT DLLs; no VC++ redistributable is imported. No installer,
-admin rights or system changes are required. Keep this folder writable.
+Extract the whole ZIP to a writable folder and open r4-runtime.exe.
+Choose your own USA BIN/CUE disc in the game menu. No game data or retail
+BIOS is included; OpenBIOS is bundled. No installer or administrator rights
+are required. Windows 11 supplies the required system libraries.
 
-Use your own USA BIN/CUE by path. From this folder:
-  r4-runtime.exe --disc "D:\\your-disc\\R4.cue"
-The custom game menu opens at startup. Select/Back opens it during play;
-Options includes controls, bindings, display and settings. Esc also opens it.
-OpenBIOS is bundled; no retail BIOS or game data is included. Do not copy SDKs,
-Git, compilers or agents to STEAMBOX. No overlay toolchain is packaged.
+Select/Back or Esc opens the in-game menu, including controls and settings.
+Hold Y/Triangle/F8 to rewind; release to resume. Right stick looks around;
+R1 changes view. Keyboard: X accelerates, Z brakes, arrow keys steer.
+Preserve your settings and saves beside the executable when updating.
 
-All nine distinct R4.BIN code-overlay images (13 archive slots) are compiled
-into the executable. No cache preparation, compiler, Python or SDK is needed
-on Windows. Original-disc guards protect each native variant. Mac smoke checks
-native overlay execution with no interpreted R4 overlay PCs on that route;
-this is not an exhaustive proof for every mode or self-modified code path.
-
-In-game settings: Select/Back, Esc or Guide. Arrows/D-pad navigate;
-Enter/A selects; Back/B/Esc returns. Resume keeps your current race.
-
-Owner-only STEAMBOX checks:
-1. Boot to an active race using your own disc path.
-2. Replay the rank-8 crash route at normal pacing with Max Detail / 8 MB RAM.
-3. Check crowded-race game/audio speed at 4K/Max Detail, presentation thread off.
-4. Check in-game menus and the physical Steam Controller, both direct launch
-   and Steam Input launch. Synthetic Mac button events do not qualify these.
-Report build version, route and observations. Preserve native saves/settings.
+For Steam Input, add r4-runtime.exe as a non-Steam game and select the
+Gamepad layout. Xbox-compatible, PlayStation and Steam controllers are
+supported. No compiler, Python, SDK or cache preparation is needed to play.
 ''')
     if args.race_60:
         with (stage / 'README.txt').open('a') as note:
