@@ -1,5 +1,8 @@
 # Handoff
 
+Owner update (2026-11-17): sound is enabled for playtests going forward on all
+platforms; this supersedes earlier requests for muted testing.
+
 ## Current candidate
 
 Menu/local multiplayer integration is committed and pushed as `8d4557ff`.
