@@ -1,34 +1,35 @@
-# RidgeRacerType4Recomp
+# Ridge Racer Type 4 Remaster
 
 R4: Ridge Racer Type 4 (USA, **SLUS-00797**), statically recompiled to a
 native runtime using [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp)
 and [our custom menu](https://github.com/tetrisgm/recomp-launcher).
-This is an in-development preview, not a finished port.
+Release qualification is in progress.
 
 ## Current status
 
-`master` is the single game development line. It contains the owner-reviewed
-recovery and the rescued Max Detail / rewind XA fixes. Races retain the
-original cadence; the old fork's packet interpolation and hold-to-rewind
-implementation are not included.
+Version 0.2.3 is being prepared for Windows x64, Linux x64 and macOS Apple
+silicon. See [release notes](RELEASE_NOTES.md) and
+[current qualification status](docs/HANDOFF.md) before publishing a build.
 
-The custom R4 menu opens at startup and over the game with **Select/Back**
-(or Esc/Guide). Options includes display settings, Modern/Classic controls,
-keyboard/gamepad bindings, input devices, deadzones, mods and volume. Save/Load
-State is on the main menu. Live settings apply immediately; restart-only changes
-are saved and labelled without restarting the race when you resume. PGXP stays on.
+The custom R4 menu opens at startup and with **Select/Back** or Esc during play.
+It includes display settings, Modern/Classic controls, keyboard/gamepad bindings,
+input devices, deadzones, mods and volume. Live settings apply immediately;
+restart-only changes are saved and labelled. PGXP stays enabled.
 
-The engine retains the upstream-based recovery and Steam Controller fixes.
-Always use the recorded submodule pins; see [upstream review](docs/UPSTREAM.md).
-Mac verification does not qualify Windows hardware, all tracks, netplay or the
-owner's reported crowded-race slowdown.
+Hold **Y/Triangle/F8** to rewind at gameplay resolution; release to resume.
+The right stick looks around and R1 changes view. The camera feedback and
+moving-car shaking are fixed. Native Mac DualSense and PC Steam Controller
+playtests passed; the owner accepted the camera and performance.
 
-Max Detail requires expanded 8 MB RAM to prevent primitive heap corruption.
-The owner's rank-8 crash route still needs manual normal-paced validation.
-Preserve the owner's `present_thread = false` setting pending investigation
-of temporal reversal, and retain their 4K/Max Detail quality settings.
-See [current work and blockers](docs/HANDOFF.md) and
-[recovery evidence](docs/recovery/README.md).
+Fresh packages enable 2160-line rendering, 60-FPS races and rewind. Resolution
+can be lowered through the menu for slower hardware. Mac and PC finite race
+checks averaged about 60 VBlanks/s; this is not an every-course performance
+promise. Linux GPU and Steam Deck performance are not yet qualified. Audio
+listening acceptance remains pending after muted automated tests.
+
+All native overlay variants are linked into the executable. No runtime compiler,
+Python installation or overlay preparation is needed to play. Supply your own
+USA disc image. Preserve your saves and settings when updating.
 
 ## Build on the Mac
 
@@ -38,7 +39,7 @@ No game data or retail BIOS is required to compile the committed native C.
 The bundled OpenBIOS is open source.
 
 ```sh
-git clone --branch master https://github.com/tetrisgm/RidgeRacerType4Recomp.git ridgeracertype4
+git clone --branch master https://github.com/tetrisgm/RidgeRacerType4Remaster.git ridgeracertype4
 cd ridgeracertype4
 git submodule update --init --recursive
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -66,14 +67,18 @@ An ordinary clone/build needs no regeneration. Only after seed, annotation,
 recompiler configuration or engine pin changes, run `tools/regen.sh` and
 commit its generated output with the change. Never edit `generated/` by hand.
 
-## Windows builds and delivery
+## Release packages
 
-All development stays on the Mac. Follow [WINDOWS_BUILD.md](docs/WINDOWS_BUILD.md)
-for cross-compilation status, the build command and delivery checks.
-STEAMBOX is only a gaming console; the owner tests completed portable builds
-by hand. Never install Git, SDKs, compilers or agents there or connect to it.
-Builds stay in new checksummed `dist/windows/<version>/` folders on the Mac. No public
-release, installer or system configuration change is part of this workflow.
+Build and packaging instructions: [Mac](docs/MAC_BUILD.md),
+[Windows](docs/WINDOWS_BUILD.md), [Linux](docs/STEAM_DECK.md).
+Development and cross-builds run on the Mac. Packages are checksummed and
+contain no disc image, retail BIOS or player data. Mac apps use Developer ID
+signing and notarization; Windows portable executables are unsigned.
+
+On Windows/Linux, extract the complete folder into a writable location and
+run `r4-runtime`. To use Steam Input, add the executable as a non-Steam game
+with the Gamepad layout. On Mac, run the native R4 app directly; a normal
+Bluetooth or USB controller does not require Steam.
 
 ## References
 
