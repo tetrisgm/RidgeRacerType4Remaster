@@ -1,17 +1,23 @@
-# Ridge Racer Type 4 Recompiled — v0.2.3 candidate
+# Ridge Racer Type 4 Remaster — v0.2.3 release preparation
 
-Right-stick camera look responds faster and holds its angle consistently.
-Intermediate redraws no longer apply the look offset twice or disturb the
-camera restore state. The Select/Back menu and existing rewind/controller
-bindings remain intact.
+Fixed right-stick camera feedback and moving-car shaking. Camera offsets now
+restore before the chase update; the car-effects sampler no longer applies a
+second, conflicting camera filter. The integrated Select/Back menu, controls,
+settings, hold-to-rewind, PGXP, MStan performance work and Steam Controller fixes
+remain intact. The owner confirmed the camera, DualSense input and performance.
 
-Native PC virtual-controller checks cover Y hold/release, directional look and
-Back. The owner confirmed the USB Steam Controller test worked well. A muted
-4K route averaged 59.76 game ticks/s over two minutes, with zero dispatch misses
-and three internal rewind releases of 32–39 ms. Mac regression coverage is now
-45 tests, including the duplicate camera adjustment regression. These are finite
-checks, not a guarantee of locked 60 FPS on every course. Final 0.2.3 packaging
-and Steam-launch qualification are pending; installed releases remain 0.2.2.
+The latest native Windows 4K route averaged 59.96 VBlanks/s. Three rewind
+releases returned in 67–78 ms including input observation; menu open/close and
+moving-camera checks passed with zero dispatch misses. Mac owner-control timing
+averaged 59.94 VBlanks/s; 45 regression tests and hidden menu/settings/race smoke
+passed. These are finite checks, not a locked-60 guarantee on every course.
+
+Mac Apple silicon is Developer-ID signed, notarized and stapled. Windows x64
+is portable and unsigned. Linux x64 packaging targets glibc 2.31 and desktop
+OpenGL; Linux/Steam Deck GPU performance remains unqualified. No disc data,
+retail BIOS, player saves or runtime compiler is bundled. Supply your own USA
+disc image. Audio listening acceptance remains outstanding because tests were
+muted. See `docs/HANDOFF.md` for current artifacts and remaining checks.
 
 ---
 

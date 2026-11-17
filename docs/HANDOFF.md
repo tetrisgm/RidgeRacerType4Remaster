@@ -1,46 +1,48 @@
 # Handoff
 
-## Current: camera/car shaking fixed; native Mac playtest handed back
+## Current: preparing 0.2.3 for Mac, Windows and Linux
 
-The look offset now restores before the next chase-camera update. Removed the
-car-effects sampler's conflicting camera hysteresis, which also ran again on
-intermediate redraws. Effects, menu, controller mappings, PGXP and rewind remain.
-Owner visibly confirmed the moving car no longer shakes, left/right work well,
-and the camera seems fixed. Normal DualSense input works after reconnecting.
+Owner accepted the camera/car-motion fixes and performance, and confirmed normal
+DualSense input. Runtime fix: `040a3455`; packaging: `55e3f5a2`.
+[Camera analysis and verification](recovery/CAMERA_MOTION_FIX_20261116.md).
+Release build, 45/45 CTests and hidden menu/settings/race smoke pass.
 
-Evidence and exact scope: [camera motion fix](recovery/CAMERA_MOTION_FIX_20261116.md).
-Release build, 45/45 CTests and hidden menu/settings/boot-to-race smoke pass.
-Capture-free interactive 4K run: 59.52 VBlanks/s, 3578/3578 intermediate frames,
-zero dispatch misses/pass faults; rewind release 70.7 ms internally. A 268.4 ms
-sampled presentation gap occurred, so perfectly flat pacing is not established.
-Audio was muted and has not been listening-tested.
+Mac native owner-control timing: 59.94 VBlanks/s. Native Windows corrected build:
+59.96 VBlanks/s at 2160 lines; moving camera, three rewind releases (67–78 ms
+including input observation) and Select/Back pass; zero dispatch misses.
+PC tunnel/sky/road images inspected without observed seams or misplaced HUD.
+Temporary PC tasks and test folders were removed; no security exception needed.
 
-`~/Desktop/R4.app` points directly to
-`~/Applications/R4-0.2.3-CameraFix/R4.app`, Developer-ID signed local playtest,
-not notarized/final release. Previous installs remain intact. The app is open
-under the owner's control, PID 66841 at handoff, debug port 4799. No test driver
-or virtual pad remains. Do not stop the owner's playtest. Player 1 is now auto;
-keyboard acceleration and reconnected DualSense were verified. Player data stays
-in `~/Library/Application Support/net.ramine.r4recomp/`; volume is zero.
+## Artifacts and remaining checks
 
-## Remaining release work
+- Final archives: `dist/releases/0.2.3/`. Mac and Windows archives are prepared;
+  Linux build/compatibility verification is still running in the local Colima VM.
+- Mac source package: `dist/macos/0.2.3-final`. Developer-ID signed, notarized,
+  stapled and accepted by Gatekeeper. Notary ID
+  `84b9eea4-71fe-4ef4-a92c-ba374bb5cce1`.
+- Windows source package: `dist/windows/0.2.3-release`. Exact tested executable;
+  unsigned. Old top-level Windows ZIP and PC Steam installation predate this fix.
+- Audio listening acceptance remains outstanding; all automated runs are muted.
+  Owner was asked to raise the in-game volume and confirm music/engine sounds.
+- Linux testing in a translated local VM establishes compatibility, not native
+  GPU/Steam Deck performance. Do not claim that performance was verified.
+- No public release or feed was published. NAS is unrelated and untouched.
 
-- Package and qualify the camera fix for Windows. Existing
-  `dist/windows/R4-0.2.3-Windows-x64.zip` predates this fix; PC Steam desktop entry
-  still points to 0.2.2. Do not label either as the corrected final release.
-- Finish capture-free performance qualification and audio listening tests;
-  complete final Mac packaging/notarization with Keychain profile `pp-notary`.
-- PC test folder/task `R4ControllerCheck20261116` remains for cleanup after final
-  verification. Owner explicitly authorized PC SSH testing in this conversation;
-  read `~/pc-inventory/STEAMBOX.md` before accessing it. Keep tests muted unless
-  asked otherwise. NAS is unrelated; do not use it.
-- Pending upstream integration is tracked in [UPSTREAM](UPSTREAM.md).
+## Owner playtest — leave it alone
 
-## References
+`~/Desktop/R4.app` points to `~/Applications/R4-0.2.3-CameraFix/R4.app`.
+It is the corrected signed playtest, not the final notarized archive above.
+Owner controls the app (PID 66841 when handed back; debug port 4799). No test
+driver or virtual pad remains. Player 1 is auto; volume is zero. Player data:
+`~/Library/Application Support/net.ramine.r4recomp/`. Do not stop the owner's app.
 
-- [Prior handoff and 0.2.2 receipts](archive/HANDOFF_BEFORE_CAMERA_FIX_20261116.md)
-- [Mac workflow](MAC_BUILD.md) / [Windows workflow](WINDOWS_BUILD.md)
-- [Rewind](REWIND_PLAYBACK.md) / [framework pins](framework_pin_history.md)
-- Current isolated grid: `analysis/rewind-release-grid-20261112/memcards`.
-  Execution identity `f3a59eb52c450e6d9f22c0cd78332c02932ca5ef11cbc3c5ffeb9787b8bb9135`.
-  Never bypass execution identity.
+## Evidence and references
+
+- `analysis/release-023-final/`: notarization, PC receipts and route images.
+- `analysis/camera-fix-visible-20261116/release-qualification.json`.
+- `analysis/camera-shake-20261116/owner-control-timing.json`.
+- `analysis/mac-final-023-bundle/native-overlay-check.json`: 7,179,901 static
+  overlay hits, zero misses in the signed bundle.
+- [Mac workflow](MAC_BUILD.md), [Windows workflow](WINDOWS_BUILD.md),
+  [Linux workflow](STEAM_DECK.md), [upstream tracking](UPSTREAM.md).
+- [Prior handoff](archive/HANDOFF_BEFORE_CAMERA_FIX_20261116.md).
