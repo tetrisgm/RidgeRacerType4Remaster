@@ -10,6 +10,10 @@ Menu code never invokes guest code from the render thread.
   native records. The queued choice sets cursor 0x800AC802 and confirm edge
   0x800F3C10 at 0x8002F5E8, after normal input polling. The original handler
   performs the transition. Settings use the custom frontend.
+- Native menu items keep their update/animation code; their OT additions are
+  removed around 0x8003F150. At DrawOTag, only the audited title-atlas logo and
+  Press Start sprites (CLUT 0x7F38, exact UV/size) are unlinked while the main
+  menu is active. Animated background drawing and non-menu scenes are retained.
 - Race actions call original 0x80034E08 and audio-resume 0x8004FD58. The native
   maximum pause item at 0x8009F8B8 determines availability: Grand Prix offers
   Retire only. Confirmations keep Cancel first. Start/keyboard Start intercept
@@ -29,6 +33,15 @@ Menu code never invokes guest code from the render thread.
   launches skip onboarding; How to play can reopen the explanation.
 
 ## Verification
+
+- `analysis/menu-finish-20261117-final/`: sound-enabled Mac boot/race smoke,
+  7,172,639 static hits and zero misses. `analysis/menu-finish-20261117-bundle-b/`
+  checks the signed local app at 2160 lines: save/load confirm, paused parent
+  return and the How to play Back button from both Main and Options. The first
+  bundle test selected Controls instead of How to play due to a checker coordinate
+  error; the corrected test and screenshots pass. Release build, 45 runtime and
+  19 launcher tests pass; home/first-run screenshots are in
+  `analysis/menu-finish-20261117-b/`.
 
 - `analysis/submenu-navigation-20261117-confirm/`: native Mac with sound,
   immediate A confirmation on Save/Load entry, Back to the parent, zero dispatch

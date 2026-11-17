@@ -3,27 +3,36 @@
 Owner update (2026-11-17): sound is enabled for playtests going forward on all
 platforms; this supersedes earlier requests for muted testing.
 
-## Menu follow-up in progress
+## Updated Mac menu playtest
 
-Launcher `27bbe4f` enters each submenu with visible focus on its first available
-control and restores the parent selection on Back. Snapshot pages have only
-Back in their rail; Load starts at the first occupied slot. First-run help is
-compact, acknowledged once and pauses the guest until Start/A/Enter. The main
-menu retains the guest backdrop and dims the whole viewport. Native Mac checks with sound enabled pass in
-`analysis/submenu-navigation-20261117-confirm/`: immediate A saves/loads the
-first slot after mouse entry, parent return remains paused, 7,172,649 static
-hits and zero dispatch misses. Release build, 45 runtime tests and 19 launcher
-tests pass. The launcher checks include visible focus and immediate confirmation.
+The signed native app is open for the owner:
+`~/Applications/R4-Menu-20261117/R4.app`. Sound is enabled (volume 100), with
+existing 2160-line/60-FPS and rewind preferences. Its separate data directory is
+`~/Library/Application Support/net.ramine.r4recomp.menu20261117`, seeded with
+copies of the owner's settings/cards. The existing desktop app and original
+player data are untouched. This is a local playtest app, not a notarized release.
+
+Launcher `725de56` finishes compact, first-run-only controls/help with visible
+Start selection and Start/A/Enter confirmation; the guest intro waits until
+confirmation. How to play returns correctly from both the race menu and Options.
+Every submenu enters its controls; Back restores the parent selection. The
+original menu buttons, title logo and stale Press Start sprites are suppressed
+while native transitions and the animated title backdrop continue. Pause dimming
+covers the whole viewport and no filler status text sits in the center.
+
+Release build, 45 runtime tests and 19 launcher tests pass. Native Mac boot/race
+smoke with sound: `analysis/menu-finish-20261117-final/` (7,172,639 static hits,
+zero misses). Actual signed-app menu checks at 2160 lines with sound pass in
+`analysis/menu-finish-20261117-bundle-b/`, including immediate save/load confirm
+and both How to play return paths. Layout/boot receipts are in
+`analysis/menu-finish-20261117-b/`. All hidden test instances are stopped; only
+the owner's visible app remains open.
 
 `55035165` reaches full rear look at half downward stick travel, leaves lateral
 response unchanged, retains wide presentation through race finish and disables
 rewind capture/activation during replay. Unit tests pass; natural finish/replay
 performance and moving-camera visual acceptance still need a final run.
-Native menu item draws are unlinked without skipping their animation/state
-updates. The original title background remains visible; review its branding
-alongside the custom heading before claiming the home presentation final.
-
-The packaged candidate below predates these follow-ups. Do not label it updated.
+The packaged release candidate below predates these follow-ups.
 
 ## Current candidate
 

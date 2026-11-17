@@ -89,6 +89,17 @@ def check_menu(output, port, *, input_settle_seconds=.25):
     back()  # Options -> main
     assert state(1)['pause_depth'] == 1
     shot('back-to-main.png')
+    click(190, 355)  # How to play from the race menu
+    shot('how-to-play.png')
+    call('host_button', name='a')  # selected Back button
+    time.sleep(input_settle_seconds)
+    state(1)
+    click(190, 307)  # Options
+    click(190, 307)  # How to play in the Options rail
+    call('host_button', name='a')
+    time.sleep(input_settle_seconds)
+    state(1)
+    shot('help-back-to-main.png')
     back()  # main -> game
     closed = state(0)
     assert closed['pause_depth'] == 0

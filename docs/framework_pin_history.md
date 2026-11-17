@@ -607,3 +607,8 @@ Back restores the parent entry; snapshot pages cannot select Save from Load.
 It also compacts first-run help, pauses boot until Start/A/Enter and keeps the
 native frontend running behind the custom main menu. Launcher tests cover
 Graphics, Controls, Mods, Settings, snapshot entry/confirmation and Back.
+
+Launcher `725de56` makes first-run Start visibly selected and routes the help
+Back button through the same parent navigation as keyboard/controller Back.
+Actual Mac bundle checks cover help from both Main and Options, and the full
+launcher suite passes.

@@ -113,6 +113,36 @@ void r4_menu_draw_end(CPUState*, uint32_t) {
         psx_mod_write_word(r4_menu_saved_ot_base + i * 4u, r4_menu_saved_ot[i]);
     r4_menu_saved_ot_base = 0;
 }
+// The title logo and "Press Start" are separate sprites in the title atlas.
+// Keep its animated light trails and copyright backdrop, but do not draw a
+// second game heading or a stale Start prompt behind the replacement menu.
+void r4_menu_title_draw(CPUState* cpu, uint32_t) {
+    if (!cpu || g_psx_render_pass_active || psx_netplay_active() ||
+        r4_frame_handler(psx_mod_read_word, psx_mod_read_half) != 0x8002F110u) return;
+    const unsigned stage = psx_mod_read_half(0x800F4F3Au);
+    if (stage < 2u || stage > 4u) return;
+    uint32_t link = cpu->gpr[4] & 0xFFFFFFu;
+    // Bound malformed/cyclic lists and retain all commands except the three
+    // audited title-atlas sprites. Packet allocation and guest logic still run.
+    for (unsigned count = 0; link < 0x800000u && !(link & 3u) && count < 8192u; ++count) {
+        const uint32_t tag = psx_mod_read_word(0x80000000u | link);
+        const uint32_t next = tag & 0xFFFFFFu;
+        if (next >= 0x800000u || (next & 3u)) break;
+        const uint32_t packet = 0x80000000u | next;
+        const uint32_t next_tag = psx_mod_read_word(packet);
+        bool hide = false;
+        if ((next_tag >> 24) == 4u && (psx_mod_read_word(packet + 4u) >> 24) == 0x66u) {
+            const uint32_t uv = psx_mod_read_word(packet + 12u);
+            const uint32_t size = psx_mod_read_word(packet + 16u);
+            hide = (uv == 0x7F380000u && size == 0x00C800E8u) ||
+                   (uv == 0x7F38C800u && size == 0x00180008u) ||
+                   (uv == 0x7F38C808u && size == 0x00180070u);
+        }
+        if (hide) psx_mod_write_word(0x80000000u | link, (tag & 0xFF000000u) | (next_tag & 0xFFFFFFu));
+        else link = next;
+    }
+}
+const int r4_menu_title_draw_hook = psx_game_register_function_entry(0x80093520u, r4_menu_title_draw);
 const int r4_menu_draw_hook = psx_game_register_function_entry(0x8003F150u, r4_menu_draw_begin);
 const int r4_menu_draw_end_hook = psx_game_register_instruction(0x8003FDACu, 0x8FA80030u, r4_menu_draw_end);
 const int r4_menu_select_hook = psx_game_register_function_entry(0x8002F5E8u, r4_menu_select);
