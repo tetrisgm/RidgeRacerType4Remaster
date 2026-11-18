@@ -45,6 +45,7 @@
  * +10 / +12 and the twist dead zone / range settings at +16 / +18, indices
  * into the EXE tables R4's pad reader uses (0x8004B728, 0x8004B6FC). */
 #define R4_MC_PAUSED_ADDR     0x800F4F6Cu
+#define R4_MC_PAUSE_MENU_ADDR 0x800F4E18u
 #define R4_MC_BUTTON_CFG_ADDR 0x800F3128u
 #define R4_MC_PAD_CAL_ADDR    0x800AD6E0u
 #define R4_MC_TWIST_DZ_TABLE  0x800A0324u   /* u16 stride 4: 0 6 10 14 */
@@ -155,14 +156,20 @@ static int r4_mc_transform(const PSXModPadFrame *frame, PSXModPadOutput *out) {
     R4ModernNegcon ng;
     if (!frame || !out || frame->player >= R4_MC_PLAYERS) return 0;
     const uint32_t handler = r4_frame_handler(r4_mc_read_word, r4_mc_read_half);
-    if (handler && !r4_is_race_handler(r4_mc_read_word, handler)) {
+    const int native_pause = (psx_mod_read_half(R4_MC_PAUSE_MENU_ADDR) & 0xFFu) != 0;
+    if (handler && (native_pause || !r4_is_race_handler(r4_mc_read_word, handler))) {
         // The original US frontend uses Circle=OK and Cross=Cancel. Swap
         // all native frontend rows, including the decal editor and Game Over.
-        // Race handlers (including replay) retain their driving mappings.
+        // Native online pause keeps the race handler active, but its
+        // confirmation buttons must match the frontend too.
         const uint32_t buttons = out->buttons;
         out->buttons = (buttons & ~(R4_MC_PAD_CROSS | R4_MC_PAD_CIRCLE)) |
                        ((buttons & R4_MC_PAD_CROSS) >> 1) |
                        ((buttons & R4_MC_PAD_CIRCLE) << 1);
+        /* Unlike the frontend, the retail pause handler confirms with
+         * Start (also packet flag 0 in Link Battle), not Circle. */
+        if (native_pause && !(out->buttons & R4_MC_PAD_CIRCLE))
+            out->buttons = (out->buttons | R4_MC_PAD_CIRCLE) & ~0x0008u;
         return 1;
     }
     if (!r4_mc_driving()) return 0;

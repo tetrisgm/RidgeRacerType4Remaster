@@ -17,6 +17,7 @@
 #include "r4_local_battle.h"
 #include "r4_race_hud.h"
 #include "r4_link_analog_steering.h"
+#include "r4_hud_packets.h"
 #if !defined(PSX_NO_DEBUG_TOOLS) && !defined(R4_LINK_TEST)
 #include "netplay_state_digest.h"
 #endif
@@ -200,8 +201,57 @@ static unsigned r4_link_views_frame;
 static uint32_t r4_link_hud_start[4], r4_link_hud_end[4];
 static unsigned r4_link_hud_open = 4;
 static uint32_t r4_link_hud_copy_head, r4_link_hud_copy_tail;
+static uint32_t r4_link_band_state;
 static int r4_link_patch_first_clip(uint32_t root, unsigned view, unsigned seats);
 static uint32_t r4_link_buffer_index(void);
+
+/* The shared countdown belongs above every private road view. Move its
+ * frame-local packet chain to the final full-frame HUD pass, retaining the
+ * producer's order and running its timing/audio logic exactly once. */
+static void r4_link_move_overlay(uint32_t root, uint32_t state)
+{
+    if (!state) return;
+    const uint32_t first = psx_mod_read_word(state);
+    const uint32_t end = psx_mod_read_word(state + 4u);
+    if (!first || end <= first) return;
+    const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
+    uint32_t nodes[512], current = root;
+    unsigned count = 0;
+    for (unsigned steps = 0; steps < 32768u; ++steps) {
+        /* Retail OTs end in a shared packet outside the frame allocator.
+         * Validate traversal as DMA RAM; only the packets we move must
+         * belong to this frame's allocator. */
+        if ((current & 3u) || (current & 0x1FFFFFFFu) >= 0x00800000u) return;
+        const uint32_t tag = psx_mod_read_word(current);
+        if (current >= first && current < end) {
+            if (count == 512u || !r4_link_packet_span(buffer, current, 4u * (1u + (tag >> 24)))) return;
+            nodes[count++] = current;
+        }
+        const uint32_t next = tag & 0xFFFFFFu;
+        if (next == 0xFFFFFFu) break;
+        current = 0x80000000u | next;
+    }
+    if (!count || r4_hud_unlink_range(root, first, end, psx_mod_read_word, psx_mod_write_word) != (int)count)
+        return;
+    for (unsigned i = 0; i < count; ++i) {
+        const uint32_t tag = psx_mod_read_word(nodes[i]);
+        psx_mod_write_word(nodes[i], (tag & 0xFF000000u) | 0xFFFFFFu);
+        if (r4_link_hud_copy_tail) {
+            const uint32_t tail = psx_mod_read_word(r4_link_hud_copy_tail);
+            psx_mod_write_word(r4_link_hud_copy_tail, (tail & 0xFF000000u) | (nodes[i] & 0xFFFFFFu));
+        } else r4_link_hud_copy_head = nodes[i];
+        r4_link_hud_copy_tail = nodes[i];
+    }
+    psx_mod_write_word(state, 0);
+    psx_mod_write_word(state + 4u, 0);
+}
+
+static void r4_link_move_band(uint32_t root)
+{
+    if (!r4_link_band_state) return;
+    r4_link_move_overlay(root, r4_link_band_state);
+    r4_link_move_overlay(root, r4_link_band_state + 8u);
+}
 
 /* The extra-seat speed and gear calls reuse a valid two-seat style record.
  * Their sprites are linked into the retail OT. The extra views get bounded
@@ -1430,6 +1480,21 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
     /* Guest calls made by the own-view draw run in a sandbox; none of the
      * bridge's frame edits apply to them. */
     if (r4_link_in_local_view) return 0;
+    if (r4_link_band_state && r4_link_views_frame && r4_link_ready()) {
+        if (address == 0x80034444u) {
+            psx_mod_write_word(r4_link_band_state, psx_mod_read_word(0x1F800000u));
+            psx_mod_write_word(r4_link_band_state + 4u, 0);
+        } else if (address == 0x80034B20u) {
+            psx_mod_write_word(r4_link_band_state + 4u, psx_mod_read_word(0x1F800000u));
+        } else if (address == 0x800207D4u &&
+                   (cpu->gpr[31] == 0x80115958u || cpu->gpr[31] == 0x80115A58u)) {
+            /* The retail full-frame fade must also follow the added roads. */
+            psx_mod_write_word(r4_link_band_state + 8u, psx_mod_read_word(0x1F800000u));
+            psx_mod_write_word(r4_link_band_state + 12u, 0);
+        } else if (address == 0x80020888u && psx_mod_read_word(r4_link_band_state + 8u)) {
+            psx_mod_write_word(r4_link_band_state + 12u, psx_mod_read_word(0x1F800000u));
+        }
+    }
     if (address == R4_LINK_VSYNC) {
         if (!r4_link_ready())
             r4_link_clear_local_image();
@@ -1490,6 +1555,8 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
             psx_mod_write_half(R4_LINK_ENTRANTS, 2u);
     }
     if (address == 0x80093520u && r4_link_ready() && r4_link_views_frame) {
+        if (r4_battle_seat_count() >= 3 && !psx_mod_read_byte(R4_LINK_PAUSED))
+            r4_link_move_band(cpu->gpr[4]);
         if (cpu->gpr[31] == 0x8001E808u) {
             r4_link_draw_view = 4;
             r4_link_place_retail_hud(cpu->gpr[4],
@@ -1544,6 +1611,12 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
                 r4_link_hud_start[i] = r4_link_hud_end[i] = 0;
             r4_link_hud_open = 4;
             r4_link_hud_copy_head = r4_link_hud_copy_tail = 0;
+            if (r4_link_band_state) {
+                psx_mod_write_word(r4_link_band_state, 0);
+                psx_mod_write_word(r4_link_band_state + 4u, 0);
+                psx_mod_write_word(r4_link_band_state + 8u, 0);
+                psx_mod_write_word(r4_link_band_state + 12u, 0);
+            }
             r4_link_patch_view_loop((unsigned)seats);
             r4_link_clear_extra_ots();
         }
@@ -1770,6 +1843,8 @@ PSX_MOD_CONSTRUCTOR(r4_link_netplay_register)
     (void)psx_game_register_instruction(0x80115F84u, 0x128000B3u, r4_battle_instruction);
     (void)psx_game_register_instruction(0x80115FA8u, 0x866301E8u, r4_battle_instruction);
     (void)psx_game_register_instruction(0x80116024u, 0x3C028010u, r4_battle_instruction);
+    (void)psx_game_register_instruction(0x80034B20u, 0x8FBF004Cu, r4_battle_instruction);
+    (void)psx_game_register_instruction(0x80020888u, 0x8FBF0024u, r4_battle_instruction);
     /* Online battle is on for every 2-4 seat netplay session (owner,
      * 2026-10-07: no experimental switch). Its memory is allocated at
      * startup, before anyone knows whether a link session follows: Expansion
@@ -1785,6 +1860,9 @@ PSX_MOD_CONSTRUCTOR(r4_link_netplay_register)
     r4_battle_button_latches = psx_mod_alloc_guest_memory(8, 4);
     r4_link_saved_rank_tags = psx_mod_alloc_guest_memory(52, 4);
     r4_link_trail_views = psx_mod_alloc_guest_memory(4u * R4_TRAIL_VIEW_BYTES, 4);
+    r4_link_band_state = psx_mod_alloc_guest_memory(16u, 4);
+    r4_register_battle_hook(0x80034444u, r4_link_serial_filter);
+    r4_register_battle_hook(0x800207D4u, r4_link_serial_filter);
     (void)psx_game_register_function_entry(0x80013014u, r4_link_reset_trails);
     (void)psx_game_register_function_entry(0x80093418u, r4_link_restore_rank_tags);
     r4_register_battle_hook(

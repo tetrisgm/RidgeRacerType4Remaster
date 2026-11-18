@@ -108,6 +108,7 @@ uint32_t psx_mod_alloc_guest_memory(uint32_t size, uint32_t alignment) {
     assert(alignment == 4);
     static unsigned small_allocations;
     if (size == 8) return 0x9F000100u + 8u * small_allocations++;
+    if (size == 16) return 0x9F000180u;
     if (size == 4u * R4_TRAIL_VIEW_BYTES) return 0x9F400000u;
     if (size == 52) return 0x9F000200u;
     if (size == 4) return 0x9F000000u;
@@ -164,7 +165,7 @@ int psx_game_register_netplay_function_filter(
 
 int main(void)
 {
-    assert(registrations == 26 && local_registrations == 26 && instruction_registrations == 5);
+    assert(registrations == 28 && local_registrations == 28 && instruction_registrations == 7);
     /* Per-frame edit state lives in snapshotted mod memory (#39): it
      * survives a store/clobber/load round trip. */
     assert(r4_link_frame_state == 0x9F000044u);
@@ -869,6 +870,36 @@ int main(void)
         }
         for (unsigned p = 0; p < 4u; ++p)
             assert(psx_mod_read_word(source + 20u*p + 16u) == 0u);
+    }
+    /* Shared countdown packets must run after all private roads, once, in
+     * their original ordering-table order, on either draw buffer. */
+    for (unsigned sample = 0; sample < 4; ++sample) {
+        const unsigned b = sample & 1u;
+        const uint32_t state = r4_link_band_state + (sample >= 2u ? 8u : 0u);
+        const uint32_t buffer = 0x800ADCA0u + b * R4_LINK_BUFFER_BYTES;
+        const uint32_t root = buffer + 0x70u, first = buffer + 0x5000u;
+        const uint32_t keep = buffer + 0x6000u;
+        const uint32_t shared = 0x800AC000u;
+        psx_mod_write_word(0x800ACDCCu, buffer);
+        psx_mod_write_word(root, (first + 20u) & 0xFFFFFFu);
+        psx_mod_write_word(first + 20u, 0x04000000u | (keep & 0xFFFFFFu));
+        psx_mod_write_word(keep, 0x01000000u | (first & 0xFFFFFFu));
+        psx_mod_write_word(first, 0x04000000u | (shared & 0xFFFFFFu));
+        psx_mod_write_word(shared, 0x00FFFFFFu);
+        psx_mod_write_word(first + 4u, 0x65808080u);
+        psx_mod_write_word(state, first);
+        psx_mod_write_word(state + 4u, first + 40u);
+        r4_link_hud_copy_head = r4_link_hud_copy_tail = 0;
+        r4_link_move_band(root);
+        assert(psx_mod_read_word(root) == (keep & 0xFFFFFFu));
+        assert(psx_mod_read_word(keep) == (0x01000000u | (shared & 0xFFFFFFu)));
+        assert(psx_mod_read_word(shared) == 0x00FFFFFFu);
+        assert(r4_link_hud_copy_head == first + 20u && r4_link_hud_copy_tail == first);
+        assert(psx_mod_read_word(first + 20u) == (0x04000000u | (first & 0xFFFFFFu)));
+        assert(psx_mod_read_word(first + 4u) == 0x65808080u);
+        assert(psx_mod_read_word(state) == 0);
+        r4_link_move_band(root);
+        assert(r4_link_hud_copy_tail == first);
     }
     return 0;
 }

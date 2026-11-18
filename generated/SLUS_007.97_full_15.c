@@ -34487,8 +34487,11 @@ block_8003C71C:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_icache_fetch(cpu, 0x8003C71Cu);
 #endif
-    { uint32_t _pgxa = cpu->gpr[29] + 64; cpu->gpr[31] = psx_cyc_load_word(cpu, cpu->gpr[29] + 64, 31, 0x20000000u);
+psx_mod_instruction(cpu, 0x8003C71Cu, 0x8FBF0040u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x8003C71Cu, 0x8FBF0040u, (uint32_t)(cpu->gpr[29] + 64));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[31] = psx_cyc_load_word(cpu, _mod_ea, 31, 0x20000000u);
     PGXP_LOAD(0x8FBF0040u, _pgxa, cpu->gpr[31]); }  /* 0x8003C71C: 0x8FBF0040 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x8003C71Cu);
 #endif

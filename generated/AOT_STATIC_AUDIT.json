@@ -1,6 +1,6 @@
 {
   "game_id": "SLUS-00797",
-  "recipe_input_sha256": "e118c448a546a96a53653aa3cf6331260e828f0f003cd8042f75a11f8fea3265",
+  "recipe_input_sha256": "410126dd5ab965dce3112751c56d5c309c7bd6da5c2f68c4d0a8d9d6f726a3a4",
   "recipe_count": 9,
   "all_pairs_valid": true,
   "all_guards_match_known_input_bytes": true,
@@ -37390,12 +37390,12 @@
   "generation_inputs": {
     "schema": "psxrecomp AOT static generation inputs v1",
     "profile_sha256": "e53398fa9eee201c984cb20b259c8c2db4e7503516ac926abac5bd0e48316d82",
-    "game_toml_sha256": "7bca3a7145d46eedb4b0a6c3317369d400068898c90c83a1ed658abb80b0f32c",
+    "game_toml_sha256": "e54b6b2380c680fb66bccb91cf773d160fd0aee9715f230c3b8663fe384b9b57",
     "disc": {
       "sha1": "75f0dab5c1f71ba80f3d1e2fefd043f3f2b9ee2e"
     },
     "recompiler_sha256": "506f1e36015d29f3d8fd92bc155fb5c5a54a35f723db30a759c84b22a67c5b02",
-    "cache_tag": "cg18_e060fa62_gc177cf35c_f0",
+    "cache_tag": "cg18_e060fa62_gcc7179d07_f0",
     "cps": true,
     "gcc": "/usr/bin/gcc",
     "tools": {
@@ -37416,5 +37416,5 @@
     },
     "mod_packages": {}
   },
-  "generation_inputs_sha256": "9a003fd40423546c1e9d8e323f5b843d94f013740b0c722ac940f0eef9744b07"
+  "generation_inputs_sha256": "57a16ebe3cac0ff990adbf7958a9a6de87eb67565abf5ae554e091c2fdcfa293"
 }

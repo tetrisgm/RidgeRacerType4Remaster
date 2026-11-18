@@ -27,6 +27,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "r4_car_effects.h"
+#include "r4_hud_packets.h"
 
 extern "C" {
 #include "cpu_state.h"
@@ -606,9 +607,9 @@ void hud_draw(int W, int H, void *) {
  * view, so menus, the attract demo, the filmed victory lap and a renderer
  * without the HUD layer keep the stock HUD.
  *
+ * The section producer 0x8003C4B4 still advances its timer and plays the
+ * split sound. Its frame-local packets are unlinked separately at DrawOTag.
  * Kept, as they are not pure drawing or have no replacement here:
- *  - 0x8003C4B4 split-time popup and the top-left lap clock / section icon:
- *    it counts down the popup timer 0x8010C244 and plays the split sound;
  *  - 0x80039C04: final-lap sound and flag, draws nothing;
  *  - 0x80022048: toggles 0x8009EE68 (blink state);
  *  - 0x8002C0F8: stores the readout row in the HUD object (+0x226F6) that
@@ -692,6 +693,24 @@ constexpr uint32_t OT1_SLOT = 0x70u, OT1_HEAD = 0xB6Cu, OT2_SLOT = 0xB70u, OT2_H
 constexpr uint32_t TAIL_FIRST = 0x22688u, TAIL_END = 0x22778u, TAIL_ENTRY = 20u;
 constexpr int TAIL_ENTRIES = (int)((TAIL_END - TAIL_FIRST) / TAIL_ENTRY);   /* 12 */
 
+static uint32_t section_first[2], section_end[2];
+void reset_section_packets(void) {
+    section_first[0] = section_first[1] = section_end[0] = section_end[1] = 0;
+}
+void section_packets(CPUState *, uint32_t address) {
+    const uint32_t buffer = psx_mod_read_word(0x800ACDCCu);
+    if (buffer != BUF0 && buffer != BUF0 + BUF_STRIDE) return;
+    const unsigned b = buffer == BUF0 ? 0u : 1u;
+    if (address == 0x8003C4B4u) {
+        section_end[b] = 0;
+        section_first[b] = skip_stock(STOCK_TIMES) ? psx_mod_read_word(0x1F800000u) : 0;
+    } else if (section_first[b]) {
+        const uint32_t end = psx_mod_read_word(0x1F800000u);
+        if (r4_max_detail_draw_heap_contains(buffer, section_first[b], end))
+            section_end[b] = end;
+    }
+}
+
 /* USA layout, 320x240 race screen (measured in a Grand Prix race). */
 struct StockLabel { int16_t x, y, w, h; uint32_t element; };
 const StockLabel k_stock_labels[] = {
@@ -701,6 +720,8 @@ const StockLabel k_stock_labels[] = {
     {44, 32, 16, 16, STOCK_RANK},     /* entrants */
     {230, 14, 84, 12, STOCK_TIMES},   /* RECORD */
     {231, 28, 12, 12, STOCK_TIMES},   /* F (before the record time) */
+    {6, 14, 100, 12, STOCK_TIMES},    /* Time Attack SECTION */
+    {10, 28, 12, 12, STOCK_TIMES},    /* Time Attack section reference F */
 };
 
 std::atomic<int> s_labels_hidden{0};  /* labels unlinked in the last frame (state) */
@@ -725,6 +746,12 @@ void unlink_stock_labels(CPUState *cpu, uint32_t) {
         else if (cpu->gpr[4] == base + OT2_HEAD) { b = k; slot = base + OT2_SLOT; }
     }
     if (b < 0) return;
+    if (cpu->gpr[4] == BUF0 + BUF_STRIDE * (uint32_t)b + OT1_HEAD) {
+        if (skip_stock(STOCK_TIMES) && section_end[b] > section_first[b])
+            r4_hud_unlink_range(cpu->gpr[4], section_first[b], section_end[b],
+                                psx_mod_read_word, psx_mod_write_word);
+        section_first[b] = section_end[b] = 0;
+    }
     uint32_t hide = 0;
     if (skip_stock(STOCK_RANK)) hide |= STOCK_RANK;
     if (skip_stock(STOCK_TIMES)) hide |= STOCK_TIMES;
@@ -836,6 +863,7 @@ static void r4_race_hud_activate(void) {
 /* Host-only: a plan without this plugin (or a netplay match) starts with the
  * HUD off. */
 static void r4_race_hud_session_reset(void) {
+    reset_section_packets();
     s_enabled.store(false, std::memory_order_relaxed);
     s_panels_shown.store(0);
     /* The framework clears session-owned HUD callbacks before invoking reset
@@ -851,11 +879,16 @@ PSX_MOD_CONSTRUCTOR(r4_register_race_hud) {
     g_panels_env = !(e && e[0] == '0');
     (void)psx_mod_register_activation_plugin(PLUGIN_ID, r4_race_hud_activate);
     (void)psx_mod_register_session_reset_plugin(PLUGIN_ID, r4_race_hud_session_reset);
+    (void)psx_mod_register_savestate_plugin(PLUGIN_ID, reset_section_packets);
     (void)psx_mod_register_command("r4.hud", hud_command);
     if (g_panels_env) {
         for (const StockFilter &f : k_stock_filters)
             s_stock_hooks += psx_mod_register_function_filter_plugin(PLUGIN_ID, f.address, f.fn);
         /* DrawOTag (in game.toml mod_function_entry_funcs) */
         s_stock_hooks += psx_mod_register_function_entry_plugin(PLUGIN_ID, 0x80093520u, unlink_stock_labels);
+        /* 0x8003C4B4 must run: it advances the split timer and plays its sound.
+         * At its common epilogue, only its newly emitted packets are hidden. */
+        (void)psx_mod_register_function_entry_plugin(PLUGIN_ID, 0x8003C4B4u, section_packets);
+        (void)psx_mod_register_instruction_plugin(PLUGIN_ID, 0x8003C71Cu, 0x8FBF0040u, section_packets);
     }
 }

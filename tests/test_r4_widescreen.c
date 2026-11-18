@@ -5,6 +5,7 @@
 #include "r4_pvs.h"
 #include "r4_widescreen_scene.h"
 #include "r4_widescreen_view.h"
+#include "r4_hud_packets.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -277,6 +278,26 @@ static void test_pvs(void)
     CHECK(r4_pvs_octant_reach(267) == 2, "32:9 adds two octants per side");
 }
 
+static void test_hud_range(void)
+{
+    const uint32_t root = RAM_BASE + 0x100, first = RAM_BASE + 0x200;
+    wr(root, 0x04000200); wr(first, 0x03000220);
+    wr(first + 0x20, 0x04000300); wr(RAM_BASE + 0x300, 0x01000240);
+    wr(first + 0x40, 0x04FFFFFF);
+    CHECK(r4_hud_unlink_range(root, first, first + 0x60, rd, wr) == 3,
+          "section packets removed across intervening unrelated primitives");
+    CHECK(rd(root) == 0x04000300 && rd(RAM_BASE + 0x300) == 0x01FFFFFF,
+          "kept primitive lengths and order preserved");
+    CHECK(rd(first) == 0x03000220, "producer packet contents retained");
+    wr(root, 0x04000200); wr(first, 0x03000200);
+    CHECK(r4_hud_unlink_range(root, first, first + 0x60, rd, wr) == -1,
+          "cyclic chain rejected");
+    CHECK(rd(root) == 0x04000200, "invalid chain has no partial mutation");
+    wr(first, 0x03000001);
+    CHECK(r4_hud_unlink_range(root, first, first + 0x60, rd, wr) == -1,
+          "unaligned links rejected before writes");
+}
+
 int main(void)
 {
     test_view();
@@ -287,6 +308,7 @@ int main(void)
     test_scene();
     test_vs_session();
     test_pvs();
+    test_hud_range();
     if (failures) {
         fprintf(stderr, "test_r4_widescreen: %d failure(s)\n", failures);
         return 1;

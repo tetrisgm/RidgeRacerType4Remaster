@@ -50,7 +50,7 @@ strict = true
 # for them (upstream runs a hook only while the resolved plan activates
 # the plugin id that registered it). Changing this list
 # needs tools/regen.sh.
-mod_instruction_sites = ["0x8002F314", "0x8005E280", "0x8003FDAC", "0x801157EC", "0x80115F74", "0x80115F84", "0x80115FA8", "0x80116024"]
+mod_instruction_sites = ["0x80020888", "0x80034B20", "0x8003C71C", "0x8002F314", "0x8005E280", "0x8003FDAC", "0x801157EC", "0x80115F74", "0x80115F84", "0x80115FA8", "0x80116024"]
 mod_function_entry_funcs = [
   # Custom main menu submits choices through the original menu handler.
   "0x8002F5E8", "0x8003F150",

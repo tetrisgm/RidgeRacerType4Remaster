@@ -14953,8 +14953,11 @@ block_80020884:
 #ifdef PSX_COSIM
     cosim_instr(0x80020884u);
 #endif
-    { uint32_t _pgxa = cpu->gpr[29] + 36; cpu->gpr[31] = psx_cyc_load_word(cpu, cpu->gpr[29] + 36, 31, 0x20000000u);
+psx_mod_instruction(cpu, 0x80020888u, 0x8FBF0024u);
+    { uint32_t _mod_ea = psx_mod_memory_address(cpu, 0x80020888u, 0x8FBF0024u, (uint32_t)(cpu->gpr[29] + 36));
+    { uint32_t _pgxa = _mod_ea; cpu->gpr[31] = psx_cyc_load_word(cpu, _mod_ea, 31, 0x20000000u);
     PGXP_LOAD(0x8FBF0024u, _pgxa, cpu->gpr[31]); }  /* 0x80020888: 0x8FBF0024 */
+    }
 #ifdef PSX_COSIM
     cosim_instr(0x80020888u);
 #endif

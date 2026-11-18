@@ -78,7 +78,8 @@ def main():
                 print("debug server not reachable (build with -DPSX_DEBUG_TOOLS=ON)")
                 return 1
             time.sleep(0.5)
-    cmd({"cmd": "virtual_pad", "player": 1, "connected": 1, "select": 1}, port=port)
+    cmd({"cmd": "virtual_pad", "player": 1, "connected": 1, "select": 1,
+         "buttons": 0, "lt": -32768, "rt": -32768, "lx": 0}, port=port)
     wait_frames(max(0, START_FRAME - cmd({"cmd": "frame"}, port=port).get("frame", 0)), port)
     try:
         for i, (label, buttons, hold, settle) in enumerate(STEPS):
@@ -104,11 +105,13 @@ def main():
                 cmd({"cmd": "virtual_pad", "player": 1,
                      "buttons": (1 if "circle" in buttons else 0) |
                                 (64 if "start" in buttons else 0),
-                     "rt": 32767 if "cross" in buttons else 0,
+                     "rt": 32767 if "cross" in buttons else -32768,
+                     "lt": -32768,
                      "lx": -26000 if "left" in buttons else 0}, port=port)
                 wait_frames(int(hold * 60), port)
                 if not label.startswith("race"):
-                    cmd({"cmd": "virtual_pad", "player": 1}, port=port)
+                    cmd({"cmd": "virtual_pad", "player": 1, "buttons": 0,
+                         "lt": -32768, "rt": -32768, "lx": 0}, port=port)
             wait_frames(int(settle * 60), port)
             path = os.path.join(out, f"{i:02d}_{label}.png")
             shot = cmd({"cmd": "screenshot", "path": path}, port=port)

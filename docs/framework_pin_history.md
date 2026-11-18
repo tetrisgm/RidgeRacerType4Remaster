@@ -1,3 +1,7 @@
+## 2026-11-18 — launcher dff6eb9: modal cancellation
+
+Controller B and Escape now cancel Restore and Disable All confirmation dialogs. All 19 launcher tests pass; actual PC Restore B was visually checked. This root pin records the launcher commit.
+
 ## 2026-11-18 — launcher cf8475f: credits wrapping
 
 Notice cards now use window-local text-wrap coordinates. Their former screen

@@ -354,10 +354,18 @@ static void test_mapping(void) {
     f = frame(press(R4_MC_PAD_CROSS), PSX_MOD_PAD_JOGCON, 0x80, all, 0, 0);
     CHECK(run(&f, &o) == 0, "wheel (JogCon) passes through");
 
-    /* Pause menu and attract demo: stock. */
+    /* Audio suspension alone does not select a menu. Native pause does,
+     * even though the active handler is still the race handler online. */
     put32(0x800F4F6Cu, 1);
     f = frame(press(R4_MC_PAD_CIRCLE), PSX_MOD_PAD_DUALSHOCK, 0x80, all, 0, 0);
-    CHECK(run(&f, &o) == 0, "pause menu passes through");
+    CHECK(run(&f, &o) == 0, "audio suspension passes through");
+    put16(0x800F4E18u, 1);
+    CHECK(run(&f, &o) == 1 && o.buttons == press(R4_MC_PAD_CROSS),
+          "B cancels native race pause");
+    f.buttons = press(R4_MC_PAD_CROSS);
+    CHECK(run(&f, &o) == 1 && o.buttons == press(0x0008u),
+          "A confirms native Restart and Retire");
+    put16(0x800F4E18u, 0);
     put32(0x800F4F6Cu, 0);
     {
         const uint32_t attract = 0x8005E118u;
