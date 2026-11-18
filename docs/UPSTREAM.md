@@ -8,7 +8,7 @@ artifacts; the frozen performance baseline is not replaced by old topic heads.
 
 | Fix | Upstream PR | Original commit |
 |---|---|---|
-| Discard old menu exit requests after provider teardown (draft; integrated lobby retest pending) | [#967](https://github.com/RetroPortingToolKit/psxrecomp/pull/967) | `7614acb5` → review `03af1d14` |
+| Discard old menu exit requests after provider teardown (draft; integrated lobby retest passed, rollback recovery caveat) | [#967](https://github.com/RetroPortingToolKit/psxrecomp/pull/967) | `7614acb5` → review `03af1d14` |
 | HD upload residency across rewind | [#860](https://github.com/RetroPortingToolKit/psxrecomp/pull/860) | `b9dcf919` |
 | HD replacement coverage over transparent native texels | [#861](https://github.com/RetroPortingToolKit/psxrecomp/pull/861) | `3a0502c5` |
 | XA music alone is not a rewind movie | [#862](https://github.com/RetroPortingToolKit/psxrecomp/pull/862) | `006fb5bb` |

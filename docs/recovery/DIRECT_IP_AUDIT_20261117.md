@@ -1,6 +1,59 @@
 # Mac / STEAMBOX direct-IP audit — 2026-11-17
 
-## Outcome and qualification boundary
+## Follow-up: rebuilt Windows lobby retest
+
+The follow-up **passed the integrated lobby Start race path** with engine
+`7614acb5` on both platforms and launcher `0dfae8c`. The rebuilt Windows SHA-256
+`56d54862911c95d75f4dd406ad9b2aade91ea237b8ad7dac5ba25842672e5f40` was read back
+from the executed file before cleanup. Mac used the ad-hoc diagnostic hash below.
+This supersedes the historical lobby-start blocker described later in this report.
+
+Evidence: `AUDIT/retest/`, including `start-result.json`, `controls.json`,
+`return-result.json`, both runtime logs, screenshots, `sync-comparison.json` and
+`cleanup.json`. The PC hosted a two-seat LAN lobby; Mac joined
+`192.168.53.188:7777`. Clicking Start race at (435,570) restarted into active P2P
+netplay on both machines (session 2, rollback enabled), instead of immediately
+exiting. Native Link entry reached a two-car Helter Skelter race, phase 2.
+
+Independent controls were read from guest car state on the Mac:
+
+- PC acceleration: P1 x changed 10064896 → 9985824, speed 0 → 324;
+  P2 stayed at x=10312704, speed 0.
+- Mac acceleration: P2 x changed 10312704 → 10200528, speed 0 → 548;
+  PC braking reduced P1 speed 324 → 166.
+- Opposite steering changed P1 yaw 3072 → 3032 and P2 3072 → 3170.
+- Mac Start opened shared pause; PC Down twice + Start retired; Results
+  Down + A exited to native title (mode 0 on both); Back opened both integrated
+  menus. Netplay remained active at the title, as recorded in `return-result.json`.
+
+Final sampled dispatch and segment misses were zero on both machines; static
+hits PC 2832740, Mac 2114708. Sampled netplay status reported desync=0. The full
+logs are more qualified: 259 of 260 shared live-core samples matched through
+sim 9248; sim 6080 differed during the return sequence. PC logged a resimulation
+core-divergence ABORT and realigned from 6048. Both subsequently replayed sim 6080
+with matching final audit core `52979d92`, and later live hashes matched.
+This is a recovered rollback divergence, **not a clean all-hashes-match run**.
+Investigate it before release qualification. Natural finish/rematch, adverse
+network conditions and physical controllers remain untested. Own-view screenshots
+still show faint duplicate HUD content; pause shows split-view/overlap artifacts.
+
+Both games used dummy audio and retained PGXP. The Mac remained hidden. Only the
+existing finished diagnostic artifacts ran on the PC; no compilation or NAS use.
+The owner disabled Smart App Control. Defender ASR rule
+`01443614-CD74-433A-B99E-2ECDC07BFC25` then blocked the EXE (event 1121). Under the
+owner's existing exact-file exception approval, an ASR-only exclusion was added
+for `C:\Users\Public\R4LobbyRetest20261117\r4-runtime.exe`; after propagation,
+the diagnostic launch succeeded. No other global protection was changed.
+
+Cleanup verified both runtimes stopped, the exact ASR exclusion removed (no
+exclusions remained), the temporary Windows firewall rule and two interactive
+tasks removed, disposable PC folder and named staging files removed. The two
+live UDP7777 router rules were removed; before/after rule listings are identical.
+The persistent router script was not changed in this follow-up. Smart App Control
+remains **Off by the owner's action**. Installed games, original saves/settings
+and other jobs/services remain untouched. No release/feed was published.
+
+## Original direct-start run: outcome and qualification boundary
 
 **PASS: an actual two-machine race, independent car controls, shared pause,
 retire/results, exit to title, and opening the integrated menu on both peers.**

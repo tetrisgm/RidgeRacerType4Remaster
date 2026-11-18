@@ -1,3 +1,12 @@
+## 2026-11-18 — same pins: integrated lobby follow-up
+
+Both platforms now ran `7614acb5` successfully through lobby Start race,
+independent controls, retire/results and menus, with rollback enabled. One
+resimulation divergence recovered; this is not clean rollback qualification.
+The owner disabled Smart App Control; a temporary exact-file ASR exclusion
+allowed the test and was removed afterward. See the
+[audit follow-up](recovery/DIRECT_IP_AUDIT_20261117.md).
+
 ## 2026-11-17 — 7614acb5 / launcher 0dfae8c: direct-IP audit
 
 Engine `1e95d2af` initializes integrated netplay callbacks without the preboot
