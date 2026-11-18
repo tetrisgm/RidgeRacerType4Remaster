@@ -1,55 +1,49 @@
 # Handoff
 
-## Current Mac work
+## Current work
 
-Owner requests one runtime instance at a time, with sound enabled. Product name
-is **Ridge Racer Type 4 Remixed**. Updated local app:
-`~/Applications/Ridge Racer Type 4 Remixed.app`; desktop shortcut has the same
-name. Bundle ID and player data remain `net.ramine.r4recomp.menu20261117`.
-Owner saves and 6x/borderless preferences are preserved. This updated app is
-Developer-ID signed, not a newly notarized release. Prior app is retained in
-`analysis/remixed-app-before-final-20261117/`.
+The muted Mac ↔ STEAMBOX direct-IP **gameplay test passed**: real two-player
+Helter Skelter race, independent acceleration/steering, shared pause,
+retire/results, exit to title and integrated menus on both machines.
+345 shared core-digest samples match; zero dispatch/segment misses.
+The successful run used direct-start arguments with delay/lockstep, not the
+integrated lobby's Start race action or rollback gameplay.
 
-Home menu stays over background demonstrations; cached clean racing images
-cover native loading and fade transitions. The idle wait is removed. A queued
-mode choice clears the accelerated idle timer and completes only after the
-selected mode leaves the shared loader. Modern A/Cross confirms native menus,
-B/Circle cancels; Classic and driving mappings are unchanged. Native menu
-artwork still labels the original Circle/Cross controls.
+Full report, hashes, prior menu coverage/gaps, screenshots, commands and cleanup:
+[direct-IP audit](recovery/DIRECT_IP_AUDIT_20261117.md).
+Local evidence: `analysis/direct-ip-audit-20261117/` and the preceding
+`analysis/menu-visual-audit-20261117/`.
 
-Engine `753e32df` maintains textured stencil masks without repeated full-surface
-rebuilds, preserving overlap ordering. Launcher `7b77092` retains the background
-and clears home state after loading snapshots; includes Remixed branding.
-See [menu integration](MENU_INTEGRATION.md), [pin history](framework_pin_history.md)
-and [modern controls](MODERN_CONTROLS.md).
+Engine `7614acb5` clears stale exit requests at menu-provider teardown; launcher
+`0dfae8c` retains popup cancellation and integrated Netplay fixes. The old lobby
+start reached tick zero then exited through `menu_to_frontend`. The lifecycle
+correction still needs an end-to-end lobby-start retest on both platforms.
+Windows Smart App Control blocked its rebuilt EXE. The gameplay test used the
+previous Windows engine `1e95d2af` and the new Mac engine; do not describe them
+as identical engine builds or claim the Windows menu-start fix is verified.
 
-## Verification and limits
+## Verification and state
 
-Release build, 46 runtime tests and 19 launcher tests pass. New real-GL mask
-fixture passes 180 color/depth/stencil checks with PGXP enabled at 1x/5x/9x.
-Modern frontend confirmation regression tests pass. Isolated Time Attack
-course → car selection and B-back were checked with an SDL virtual controller:
-`analysis/home-timeattack-20261117/`.
+Mac Release and Windows cross-build pass, runtime/title tests 47/47, launcher
+19/19, regeneration unchanged, real-race smoke passes. Gameplay explicitly
+kept PGXP geometry/texture/CPU tracking on. Diagnostic only; no release/feed.
 
-Final corrected renderer replay run at 9x with sound:
-`analysis/replay-stutter-20261117/final-mask-order/`. Normal game speed
-(60.09 VBlanks/s), snapshot load 38 ms, zero dispatch misses. 752 of 904 requested
-intermediate frames rendered: this is not a perfect 60-unique-frame claim.
-User's source slot 1 and sidecars are preserved under that analysis directory's
-`source/saves/`; original player saves are untouched.
+Both games are stopped. Temporary router rules, Windows firewall rule, task,
+PC files and ineffective exact-hash policy are removed and verified. Existing
+services/jobs/settings/saves preserved; Smart App Control remains enabled.
+No NAS use or PC restart. Owner authorized this PC test and waived unavailable
+Ghidra as a prerequisite for its menu/network work; no contract files changed.
 
-Final native boot/race and save/load/menu smoke passes with sound: 7,172,603
-static overlay hits and zero dispatch misses in
-`analysis/remixed-home-final-20261117-b/`. The signed updated app was visually
-checked with its preserved settings: home overlay over a replay, covered mode
-transition and A/Cross advancing through Time Attack course, car and transmission
-selection into a moving race. Virtual pad detached; only the visible app remains,
-paused for the owner. Receipts:
-`analysis/remixed-home-app-final-20261117/`.
-Do not call new Windows/Linux packages or public release qualification complete.
-Prior release candidate and wider platform limitations are archived in
-[previous handoff](archive/HANDOFF_20261117_MENU.md). No release/feed published.
+Installed `~/Applications/Ridge Racer Type 4 Remixed.app` and desktop shortcut
+remain on the older signed build. Current diagnostic Mac app is
+`analysis/menu-visual-audit-20261117/Menu Audit.app` (ad-hoc signed).
 
-Follow-up observed during Time Attack: original SECTION/split readouts overlap
-the optional Modern HUD lap panel. Existing native prompts still show original
-Circle/Cross artwork. These are not resolved by the menu navigation fix.
+## Remaining blockers
+
+Trusted execution of the rebuilt Windows EXE, integrated lobby-start validation,
+rollback and natural finish/rematch coverage; multiplayer own-view/HUD artifacts;
+TA SECTION/HUD overlap; local 3/4 start-light boundaries; native Circle/Cross
+prompts and LinkEntry/LinkBattle naming. No new physical-controller/audio/4K,
+Linux or public-release qualification. Exact continuation is in the audit report.
+
+Pre-audit state: [archived handoff](archive/HANDOFF_20261117_BEFORE_MODE_AUDIT.md).

@@ -1,3 +1,15 @@
+## 2026-11-17 — 7614acb5 / launcher 0dfae8c: direct-IP audit
+
+Engine `1e95d2af` initializes integrated netplay callbacks without the preboot
+launcher; `7614acb5` discards old provider exit requests after teardown. Launcher
+`0dfae8c` keeps popup cancellation local and exposes home Netplay. Mac Release,
+47 title tests, 19 launcher tests, regeneration (unchanged C) and real-race smoke
+pass. Direct-start Mac/Windows race, independent controls and return pass with
+345 matching core digests and zero dispatch/segment misses. Windows used
+`1e95d2af`: Smart App Control blocked the new EXE. The integrated lobby-start
+correction is not yet end-to-end qualified. See the
+[full audit and limitations](recovery/DIRECT_IP_AUDIT_20261117.md).
+
 ## 2026-11-17 — 753e32df / launcher 7b77092: replay masks and frontend backgrounds
 
 Renderer keeps textured stencil masks current and splits overlapping draws to
