@@ -42,8 +42,14 @@ Final native boot/race and save/load/menu smoke passes with sound: 7,172,603
 static overlay hits and zero dispatch misses in
 `analysis/remixed-home-final-20261117-b/`. The signed updated app was visually
 checked with its preserved settings: home overlay over a replay, covered mode
-transition and A/Cross advancing Time Attack to car selection. Receipts:
+transition and A/Cross advancing through Time Attack course, car and transmission
+selection into a moving race. Virtual pad detached; only the visible app remains,
+paused for the owner. Receipts:
 `analysis/remixed-home-app-final-20261117/`.
 Do not call new Windows/Linux packages or public release qualification complete.
 Prior release candidate and wider platform limitations are archived in
 [previous handoff](archive/HANDOFF_20261117_MENU.md). No release/feed published.
+
+Follow-up observed during Time Attack: original SECTION/split readouts overlap
+the optional Modern HUD lap panel. Existing native prompts still show original
+Circle/Cross artwork. These are not resolved by the menu navigation fix.
