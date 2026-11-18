@@ -27,7 +27,7 @@ The right stick looks around and R1 changes view. The camera feedback and
 moving-car shaking are fixed. Native Mac DualSense and PC Steam Controller
 playtests passed; the owner accepted the camera and performance.
 
-Fresh packages enable 2160-line rendering, 60-FPS races and rewind. Resolution
+Fresh packages enable 3× rendering, 60-FPS races and rewind. Resolution
 can be lowered through the menu for slower hardware. Mac and PC finite race
 checks averaged about 60 VBlanks/s; this is not an every-course performance
 promise. Linux GPU and Steam Deck performance are not yet qualified. Audio

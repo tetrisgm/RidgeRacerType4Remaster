@@ -26,7 +26,7 @@ def main():
     parser.add_argument('--build', required=True, type=Path)
     parser.add_argument('--sign-identity', default='-', help='Developer ID Application identity; - is local ad-hoc only')
     parser.add_argument('--app-version', default=(ROOT / 'VERSION').read_text().strip())
-    parser.add_argument('--race-60', action='store_true', help='select fixed 2160-line / 60-FPS race settings')
+    parser.add_argument('--race-60', action='store_true', help='select 60-FPS race and rewind settings; retain framework resolution defaults')
     parser.add_argument('--evidence', required=True, type=Path,
                         help='verified performance/visual qualification receipt')
     args = parser.parse_args()
@@ -84,14 +84,6 @@ def main():
     shutil.copytree(build / 'mods/bundled', stage / 'mods/bundled')
     if args.race_60:
         (stage / 'mods/state.toml').write_text('''format_version = 2
-[[package]]
-id = "psx.enhancement.internal-resolution"
-[[feature]]
-package_id = "psx.enhancement.internal-resolution"
-id = "internal-resolution"
-enabled = true
-[feature.values]
-resolution = "9x"
 [[package]]
 id = "r4.enhancement.frame-rate"
 [[feature]]
@@ -167,7 +159,7 @@ such. Signing and notarization status is recorded in DELIVERY.json beside the ap
 ''')
     if args.race_60:
         with (stage / 'README.txt').open('a') as note:
-            note.write('\nThis package selects fixed 9x (2160 lines) and the 60-FPS GP race enhancement.\nAutomatic rewind capture is enabled in this release.\nManual save/load states also remain available.\nChange these in the custom menu if desired.\n')
+            note.write('\nThis package selects the framework 3x rendering default and the 60-FPS GP race enhancement.\nAutomatic rewind capture is enabled in this release.\nManual save/load states also remain available.\nChange these in the custom menu if desired.\n')
     shutil.copy2(stage / 'README.txt', delivery / 'README.txt')
     signing = ['codesign', '--force', '--sign', args.sign_identity]
     if args.sign_identity != '-':

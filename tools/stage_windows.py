@@ -27,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('version')
     parser.add_argument('--toolchain', required=True, type=Path)
-    parser.add_argument('--race-60', action='store_true', help='select 2160-line/60-FPS race defaults with rewind')
+    parser.add_argument('--race-60', action='store_true', help='select 60-FPS race defaults with rewind; retain framework resolution defaults')
     args = parser.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', args.version):
         parser.error('version must be a simple folder name')
@@ -78,14 +78,6 @@ def main():
     (stage / 'game.toml').write_text(game_config)
     if args.race_60:
         (stage / 'mods/state.toml').write_text('''format_version = 2
-[[package]]
-id = "psx.enhancement.internal-resolution"
-[[feature]]
-package_id = "psx.enhancement.internal-resolution"
-id = "internal-resolution"
-enabled = true
-[feature.values]
-resolution = "9x"
 [[package]]
 id = "r4.enhancement.frame-rate"
 [[feature]]
@@ -164,7 +156,7 @@ supported. No compiler, Python, SDK or cache preparation is needed to play.
 ''')
     if args.race_60:
         with (stage / 'README.txt').open('a') as note:
-            note.write('\nFresh defaults select 2160-line internal rendering, the 60-FPS GP race enhancement,\n'
+            note.write('\nFresh defaults select 3x internal rendering, the 60-FPS GP race enhancement,\n'
                        'and hold Y/Triangle/F8 to rewind; release resumes the selected point.\n'
                        'Select/Back opens the custom menu. Change preferences there if desired.\n')
     (stage / 'DELIVERY.json').write_text(json.dumps(dict(

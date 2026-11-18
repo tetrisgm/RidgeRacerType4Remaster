@@ -67,14 +67,6 @@ def main():
     shutil.copytree(build / 'mods/bundled', stage / 'mods/bundled')
     (stage / 'mods/state.toml').write_text('''format_version = 2
 [[package]]
-id = "psx.enhancement.internal-resolution"
-[[feature]]
-package_id = "psx.enhancement.internal-resolution"
-id = "internal-resolution"
-enabled = true
-[feature.values]
-resolution = "9x"
-[[package]]
 id = "r4.enhancement.frame-rate"
 [[feature]]
 package_id = "r4.enhancement.frame-rate"
@@ -131,7 +123,7 @@ Settings and saves remain beside the executable; preserve them when updating.
 
 To use Steam Input, add r4-runtime as a non-Steam game and select the Gamepad
 layout. No compiler, Python, SDK or overlay preparation is needed to play.
-Fresh defaults enable 2160-line rendering, 60-FPS races and rewind. Adjust
+Fresh defaults enable 3x rendering, 60-FPS races and rewind. Adjust
 resolution in the menu for your hardware; no Steam Deck performance claim.
 ''')
     receipt = {key: audit[key] for key in ('game_id', 'recipe_count', 'published_variants',

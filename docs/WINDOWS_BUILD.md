@@ -54,7 +54,7 @@ JOBS=2 bash tools/build_windows.sh 2026.11.11-release-01
 Use a **new version every time**. Output is `dist/windows/<version>/` with
 `BUILD.json`, PE imports, runtime assets, OpenBIOS, license notices and
 `SHA256SUMS`. Release builds enable runtime IPO/LTO and tracing stays off.
-Fresh package defaults select 2160-line rendering, the 60-FPS GP enhancement
+Fresh package defaults select 3× rendering, the 60-FPS GP enhancement
 and hold-to-rewind. The Windows presentation worker remains off. Only bundled
 mods and new defaults are staged; build-directory player state is excluded.
 `DELIVERY.json` records signing and execution qualification separately.
