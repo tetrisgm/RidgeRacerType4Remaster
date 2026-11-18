@@ -1,3 +1,10 @@
+## 2026-11-18 — launcher cf8475f: credits wrapping
+
+Notice cards now use window-local text-wrap coordinates. Their former screen
+coordinate clipped long license paragraphs at the right edge. Mac/Windows
+Release builds and all 19 launcher tests pass; live visual qualification remains
+part of the ongoing menu audit.
+
 ## 2026-11-18 — 33cb5ed8: rollback, own-view presentation and menu scale
 
 Engine commits `78e8e076`, `71843e4e` and `33cb5ed8` accelerate supported ARM64
