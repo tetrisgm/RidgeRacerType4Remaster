@@ -1,11 +1,64 @@
 # Handoff — release qualification
 
-**Status (2026-11-18): release blocked.** The latest source is root `7b06bbfd`, engine submodule `ac591d54`, launcher submodule `dff6eb9`. The v19 Mac and Windows Release builds, 50 runtime tests, 19 launcher tests, and hidden Mac GP smoke passed; smoke had zero dispatch and segment misses. These checks precede the newly observed Windows failure, so do not publish or claim release ready.
+**Status (2026-11-18, evening):** the v19 Windows GPU out-of-memory blocker did not reproduce, and no renderer defect was found. Source is unchanged at root `83ad239f`, engine `ac591d54`, launcher `dff6eb9`. NetPlay qualification is clean. Publishing still needs the owner's go.
 
-The muted v19i Mac ↔ STEAMBOX direct-IP run joined the integrated lobby and entered a playable Helter Skelter race. Both actual rendered views showed a complete road and one HUD without the previously reported black wedges in the inspected frames. Twenty status pairs over 20 seconds stayed within two simulation ticks with zero reported desync; both peers had zero dispatch and segment misses. The PC runtime later exited with task result `3221225477` (`0xC0000005`); Windows Application events from **NVIDIA OpenGL Driver**, ID 2, repeatedly reported out-of-memory for that runtime PID (2248). This is the blocking defect. An earlier v12 natural three-lap NetPlay run had 1,536/1,536 matching shared hashes, but cannot qualify v19.
+## Windows GPU out-of-memory: diagnosis
 
-The PC diagnostic profile saved **4×** even though the fresh default is **3×**; preserve that saved user preference. A subsequent v19j PC-only host-lobby run sampled NVIDIA memory every roughly six seconds for six minutes: total used stayed about **1,203–1,214 MiB** on the 16 GiB card. Thus idle lobby memory growth was **not reproduced**; the crash may require active race/transition, but its exact allocation path is unproven. The GPU renderer has a 256 MiB render-pass generation budget (`psxrecomp/runtime/src/gpu_gl_renderer.c:8918`), and own-view FBOs are reused by dimensions (`:9103`, `:9705`). Do not alter these based on the event alone. Instrument or monitor live-race GPU memory, capture the failing GL allocation, repair the cause, then repeat a muted two-machine check with consecutive frames and a longer clean run. Keep PGXP geometry, perspective, and CPU mode on. The user asked to finish release readiness, but also asked to hand this work to another AI after repeated tool “bad request” errors.
+- **Mac reproduction:** single-player at 4× and two-peer loopback NetPlay. GPU memory stayed flat. Pass-owned GL allocations stayed constant (7) across about 3,700 own-view frames, so backups are not reallocated per frame.
+- **STEAMBOX reproduction:** the saved 4× profile, with PC GPU memory sampled every ~6 s. All runs stayed flat:
+  - single-player race: 1.09 GiB, 6 min;
+  - delay-mode NetPlay: 1.25 GiB, 7 min;
+  - delay mode with the launcher layer plus the crash run's PGXP and diagnostic environment: 1.25 GiB, 8 min;
+  - rollback mode, as in the crash run: 1.24 GiB, 8 min;
+  - final rollback run: peak 1.29 GiB, 11 min.
+- **Probable cause: system commit exhaustion on the PC, not GPU memory.**
+  - The WSL VM (`vmmemWSL`) commits about 40 GiB of the 59 GiB commit limit (48 GiB RAM + 10.5 GiB pagefile). Only 8.8 GiB was free when measured.
+  - The NVIDIA OpenGL driver reports a failed system-memory commit as "out of memory".
+  - Its 12:54 events fit that pressure. So does a Volsnap "shadow copy storage could not grow" error at 12:38.
+  - This is inferred: commit was not sampled at 12:54. Windows Error Reporting has no r4-runtime crash record.
+- **Owner decision:** whether to cap or stop WSL on STEAMBOX (for example, a `.wslconfig` memory limit). It was not changed, because the console PC is the owner's.
 
-Local receipts: ignored `analysis/netplay-fixes-20261118/` (`v19i-brief-sync.json`, `pc/mac-v19i-race-check.png`, `pc/mac-v19i-moving.png`, `CURRENT.md`); prior menu coverage `analysis/menu-visual-audit-20261117/PROGRESS.md`. Windows crossbuild procedure: `docs/WINDOWS_BUILD.md`. No candidate package or release was published. Both diagnostic game processes are now stopped. Temporary PC folder and scheduled task `C:\Users\Public\R4Fixes20261118`, exact-file ASR/firewall exception and two live-only router UDP 7777 rules still require exact cleanup after testing; preserve unrelated services, saves, and the owner's Smart App Control choice.
+## Final NetPlay check (muted, Mac host ↔ STEAMBOX guest, direct IP, rollback, 4× on the PC)
 
-**Working tree:** root `game.toml` contains an uncommitted `multitap_analog = true` line that appeared during the test (mtime 12:44 local). Its author is unknown. Do not overwrite or commit it until ownership and intent are established. Engine and launcher trees are clean. The project rules in `AGENTS.md`, `CLAUDE.md`, inherited `psxrecomp/CLAUDE.md`, and the STEAMBOX runbook apply; the user's explicit authorization for PC control and muted testing supersedes the older project prohibition. No worktrees or subagents. Use the existing SSH identity and diagnostic temporary folder; do not change installed game or native saves.
+- 11 minutes of racing.
+- 1,181 matched shared-state digests and 0 mismatches.
+- 0 dispatch and segment misses on both peers.
+- 17,641 and 17,642 own views, with 0 aborted, 0 VRAM leaks and 0 verify mismatches.
+- 20 status pairs stayed within 0–7 simulation ticks, with no desync.
+- 16-frame present bursts were captured on both sides. The HUD and geometry are coherent and move between frames. The views are limited, though:
+  - the scripted driver held the PC car against a wall;
+  - the fresh Mac profile showed the first-run introduction card over the race.
+- Not exercised in this run: the integrated-lobby join path that the v19i run used.
+
+Receipts, in the ignored `analysis/netplay-fixes-20261118/v19-final-20261118/`:
+
+- `report.json`, `sync.json`, `qual.log`;
+- PC memory logs `pcmon*.log`;
+- the PC runtime log;
+- one frame per side.
+
+Earlier evidence: `analysis/netplay-fixes-20261118/CURRENT.md`.
+
+## Cleanup done
+
+On STEAMBOX, removed:
+
+- `C:\Users\Public\R4Fixes20261118`;
+- the scheduled tasks `R4Fixes20261118` and `R4FixesShow20261118`;
+- the exact-file ASR exclusion (none existed before);
+- the firewall rule `R4 fixes test 20261118`.
+
+The two live UDP 7777 router rules were deleted. `SDN_IA` again holds only the rules from `~/bin/router-console-rules`.
+
+Untouched:
+
+- the installed game and native saves;
+- Smart App Control;
+- the NAS.
+
+## Open
+
+- **Root `game.toml`:** the uncommitted `multitap_analog = true` line (12:44, author unknown) is still uncommitted and preserved.
+- **Release:** none published. A release needs the owner's go, ideally after the WSL decision and an integrated-lobby NetPlay pass.
+
+Procedures: `docs/WINDOWS_BUILD.md`, `tools/r4_online_battle_regression.py`. The `--remote-seat` option has the PC peer started by the operator.
