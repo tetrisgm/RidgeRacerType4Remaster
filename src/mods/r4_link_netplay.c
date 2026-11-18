@@ -1052,6 +1052,13 @@ static int r4_link_in_local_view;
 static int32_t r4_link_mirror_slide, r4_link_mirror_next;
 static uint32_t r4_link_mirror_tick = UINT32_MAX;
 static uint64_t r4_link_local_ok, r4_link_local_failed;
+static int r4_link_local_presented;
+static void r4_link_clear_local_image(void)
+{
+    if (!r4_link_local_presented) return;
+    psx_mod_render_local_view_clear();
+    r4_link_local_presented = 0;
+}
 
 typedef struct R4LinkCall {
     struct CPUState *cpu;
@@ -1121,6 +1128,7 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
     const R4LinkLocalView *v = (const R4LinkLocalView *)user;
     const uint32_t buf = v->buffer, ot = buf + 0x70u;
     const uint32_t phase = psx_mod_read_word(R4_LINK_PHASE);
+    const int paused = psx_mod_read_byte(R4_LINK_PAUSED) != 0;
     const uint32_t tick = psx_mod_read_word(R4_LINK_TICK);
     uint32_t car_k, angle, position;
     R4LinkCall call = {cpu, (cpu->gpr[29] - 0x100u) & ~7u, 0};
@@ -1165,6 +1173,12 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
     }
     const uint32_t car = R4_LINK_P1_CAR;
 
+    /* Retail Link Battle builds its pause menu with this draw-only producer
+     * (0x80115D40..54). Redraw it over this seat's full view, using the shared
+     * cursor, rather than exposing the canonical multi-seat frame. */
+    if (paused)
+        r4_link_call(&call, 0x80034F14u, ot,
+                    (uint32_t)(int32_t)(int8_t)psx_mod_read_byte(0x800F318Cu));
     if (phase < 4u)
         r4_link_call(&call, 0x80034444u, ot, tick);
     if (phase - 1u < 3u) {
@@ -1209,7 +1223,7 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
                 psx_mod_write_word(0x1F800008u + 4u * i, temporal_camera[i]);
                 psx_mod_write_word(0x1F800018u + 4u * i, temporal_camera[i + 3]);
             }
-        } else {
+        } else if (!paused) {
             if (phase == 0u && tick < 90u)
                 r4_link_call(&call, 0x80033974u, car, 0);
             else
@@ -1221,9 +1235,11 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
         if ((int16_t)psx_mod_read_half(car + 0x1EAu) != 0 &&
             psx_mod_read_byte(R4_LINK_PAUSED) == 0)
             r4_link_call(&call, 0x8002258Cu, 0, 0);
-        /* The course renderer keeps state per view index; this seat's view
-         * used index seat & 1 in the shared frame. */
-        r4_link_call(&call, 0x8006F00Cu, v->seat & 1u, 0);
+        /* 0x8006F4AC resolves this index to P1_CAR + index*0x320 + 0xF0.
+         * The local car was swapped into P1 above, so visibility must also
+         * use index 0. Using the original seat selects the other car's
+         * course section once the entrants separate. */
+        r4_link_call(&call, 0x8006F00Cu, 0, 0);
         r4_link_call(&call, 0x800738C4u, 0, 0);
         r4_link_call(&call, 0x80074AD8u, 0, 0);
         r4_link_call(&call, 0x800374F8u, 1, 0);
@@ -1232,7 +1248,7 @@ static int r4_link_draw_local_view(struct CPUState *cpu, void *user,
          * is this peer's presentation state, kept on the host. */
         psx_mod_write_word(R4_LINK_MIRROR_SLIDE, (uint32_t)r4_link_mirror_slide);
         r4_link_call(&call, 0x80070A58u, psx_mod_read_word(0x800AC068u), 0);
-        if (!alpha_q16)
+        if (!alpha_q16 && !paused)
             r4_link_mirror_next = (int32_t)psx_mod_read_word(R4_LINK_MIRROR_SLIDE);
     }
     r4_link_call(&call, 0x80093590u, buf, 0);               /* PutDrawEnv */
@@ -1284,9 +1300,8 @@ static void r4_link_local_view(struct CPUState *cpu)
     static int frame_cost = -1, view_cost = -1;
     r4_link_test_spend(r4_link_test_cost_ms("PSX_R4_LINK_TEST_FRAME_COST_MS",
                                             &frame_cost));
-    if (!r4_link_seats_ok(seats) || slot < 0 || slot >= seats ||
-        psx_mod_read_byte(R4_LINK_PAUSED) != 0)
-        return; /* paused: the whole frame with the shared menu */
+    if (!r4_link_seats_ok(seats) || slot < 0 || slot >= seats)
+        return;
     view.seat = (unsigned)slot;
     view.buffer_index = (psx_mod_read_word(R4_LINK_FRAME_COUNTER) & 1u) ^ 1u;
     view.buffer = R4_LINK_BUF_BASE + view.buffer_index * R4_LINK_BUFFER_BYTES;
@@ -1316,7 +1331,7 @@ static void r4_link_local_view(struct CPUState *cpu)
                                   digest_receipts < 16u;
         const uint32_t digest_before = verify_digest ? netplay_master_digest(cpu) : 0;
 #endif
-        const int ok = psx_mod_render_local_view(cpu, &rect,
+        const int ok = psx_mod_render_local_view_complete(cpu, &rect,
                                                  r4_link_draw_local_view, &view);
 #if !defined(PSX_NO_DEBUG_TOOLS) && !defined(R4_LINK_TEST)
         if (verify_digest) {
@@ -1330,6 +1345,7 @@ static void r4_link_local_view(struct CPUState *cpu)
         r4_link_in_local_view = 0;
         if (ok) {
             r4_link_mirror_slide = r4_link_mirror_next;
+            r4_link_local_presented = 1;
             ++r4_link_local_ok;
             return;
         }
@@ -1340,6 +1356,7 @@ static void r4_link_local_view(struct CPUState *cpu)
     } else if (status == PSX_MOD_RENDER_PASS_SESSION) {
         return; /* resimulation: nothing is presented */
     }
+    r4_link_clear_local_image();
     r4_link_present_local_view((unsigned)seats);
 }
 
@@ -1414,6 +1431,8 @@ static int r4_link_serial_filter_body(struct CPUState *cpu, uint32_t address)
      * bridge's frame edits apply to them. */
     if (r4_link_in_local_view) return 0;
     if (address == R4_LINK_VSYNC) {
+        if (!r4_link_ready())
+            r4_link_clear_local_image();
         if (cpu->gpr[31] == R4_LINK_RA_PASS_POINT && r4_link_ready() &&
             r4_link_views_frame)
             r4_link_local_view(cpu);

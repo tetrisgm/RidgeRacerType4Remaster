@@ -3,6 +3,7 @@
 #if __has_include("psx_menu_host.h")
 #include "mod_plugins.h"
 #include "psx_netplay.h"
+#include "psx_menu_host.h"
 #include "cpu_state.h"
 #include "psx_cycle_freeze.h"
 #include "../src/mods/r4_widescreen_scene.h"
@@ -15,7 +16,7 @@ std::atomic<unsigned> r4_local_menu_players{2};
 // Guest-thread cache survives the native title -> demonstration -> title loop.
 std::atomic<unsigned> r4_home_actions{0};
 std::atomic<bool> r4_home_leaving{false};
-void r4_home_reset() { r4_home_actions = 0; r4_home_leaving = false; r4_menu_actions = 0; }
+void r4_home_reset() { r4_home_actions = 0; r4_home_leaving = false; r4_menu_actions = 0; psx_mod_set_attract_background(0); }
 void r4_home_input(CPUState* cpu, uint32_t address) {
     if (!cpu || g_psx_render_pass_active || psx_netplay_active()) return;
     if (address == 0x8002F314u && psx_mod_read_half(0x800F4F3Au) == 1u) {
@@ -72,6 +73,9 @@ void r4_menu_select(CPUState* cpu, uint32_t) {
 void r4_menu_frame(CPUState* cpu, uint32_t) {
     if (!cpu || g_psx_render_pass_active || cpu->gpr[31] != 0x8001E764u) return;
     const uint32_t handler = r4_frame_handler(psx_mod_read_word, psx_mod_read_half);
+    const PsxMenuProvider *menu = psx_menu_provider();
+    psx_mod_set_attract_background((r4_home_actions || handler == 0x8005E118u) && menu &&
+        menu->is_open && menu->is_open(menu->ctx));
     const uint32_t phase = psx_mod_read_word(R4_RACE_PHASE_ADDR);
     const unsigned mode = psx_mod_read_half(0x800F4EF4u);
     unsigned available = 0;

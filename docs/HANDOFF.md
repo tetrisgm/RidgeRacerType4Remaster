@@ -2,6 +2,26 @@
 
 ## Current work
 
+**2026-11-18 qualification is still in progress; do not release.** Current
+uncommitted work fixes stale rollback confirmations, retained own-player
+presentation and pause drawing, and adds permanent menu-attract cover/reduced
+resolution with a fresh 3× default. The owner requires actual Moonlight visual
+verification, all menu exit states, natural finish/replay, and performance.
+
+The latest diagnostic pair is v9, muted, Mac hidden and PC visible through
+Moonlight. v7 had 423/423 shared core matches but only 9–12 FPS. Deferring stencil
+reconstruction reduced draw batches from ~1,300 to ~70 and improved v8 to
+18–20 FPS; this is still a failed performance qualification. v9 additionally
+removes unused per-frame media snapshot checksums while retaining recovery
+probe verification. Its two builds pass; live qualification continues.
+
+Exact active processes, pending checks, evidence and temporary infrastructure:
+local `analysis/netplay-fixes-20261118/CURRENT.md`. Temporary PC tasks/files,
+the exact-file ASR exclusion and UDP rules are currently present and require
+cleanup after testing. Installed releases and original saves remain untouched.
+
+## Previous completed audit
+
 The muted Mac ↔ STEAMBOX direct-IP test passed through the **integrated lobby**:
 join, Start race, two-car Helter Skelter race, independent acceleration/steering,
 shared pause, retire/results, native title and integrated menus on both machines.
@@ -24,7 +44,7 @@ Mac Release and Windows cross-build pass, runtime/title tests 47/47, launcher
 19/19, regeneration unchanged, real-race smoke passes. Gameplay explicitly
 kept PGXP geometry/texture/CPU tracking on. Diagnostic only; no release/feed.
 
-Both games are stopped. Temporary router/firewall rules, tasks, PC files,
+At the end of that previous audit both games were stopped. Its router/firewall rules, tasks, PC files,
 ineffective exact-hash policy and the successful temporary ASR-only exact-file
 exception are removed and verified. Existing services/jobs/settings/saves are
 preserved. Smart App Control is Off, disabled by the owner during the retest.

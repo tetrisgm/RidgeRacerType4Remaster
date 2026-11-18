@@ -1,3 +1,15 @@
+## 2026-11-18 — 33cb5ed8: rollback, own-view presentation and menu scale
+
+Engine commits `78e8e076`, `71843e4e` and `33cb5ed8` accelerate supported ARM64
+checksums, discard stale replay confirmations, avoid unused live snapshot hashes,
+retain complete local-player images and provide menu-background cover/scale.
+Fresh internal resolution defaults to 3×; menu reduction preserves saved choices.
+Deferred stencil reconstruction restores batching while retaining attachment parity.
+Mac/Windows builds and 50 runtime tests pass. Full two-machine qualification is
+still in progress: separated cars exposed a title-side course-index error, now
+covered by a regression test. No release claim; current evidence is linked from
+[Handoff](HANDOFF.md).
+
 ## 2026-11-18 — same pins: integrated lobby follow-up
 
 Both platforms now ran `7614acb5` successfully through lobby Start race,
