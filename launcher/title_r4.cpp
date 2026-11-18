@@ -199,7 +199,7 @@ void draw_hero(void* dl_v, float x0, float y0, float x1, float y1, double t) {
 
 const TitleLayer kR4 = {
     "r4",
-    "Ridge Racer Type 4 Remastered",
+    "Ridge Racer Type 4 Remixed",
     "Native PC recompilation · " R4_DISC_SERIAL,
     R4_DISC_SERIAL,
     {255, 92, 54},
@@ -228,12 +228,12 @@ const TitleLayer kR4 = {
     static_cast<int>(sizeof(kSurface) / sizeof(kSurface[0])),
     extract_r4_assets,
     draw_hero,
-    "Ridge Racer Type 4 Recompiled",  // Add to Steam: library name
+    "Ridge Racer Type 4 Remixed",  // Add to Steam: library name
     r4_menu_available, r4_menu_queue,
     kGameModes, static_cast<int>(sizeof(kGameModes) / sizeof(kGameModes[0])),
     kIntroduction, static_cast<int>(sizeof(kIntroduction) / sizeof(kIntroduction[0])),
     r4_menu_status,
-    0x400u, r4_menu_local_game,
+    0x400u, r4_menu_local_game, r4_home_reset,
 };
 
 }  // namespace

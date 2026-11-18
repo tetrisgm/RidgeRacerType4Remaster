@@ -117,7 +117,7 @@ enabled = true
         shutil.copy2(src, stage / 'licenses' / name)
     (stage / 'Start R4.sh').write_text('#!/bin/sh\nset -eu\ncd -- "$(dirname -- "$0")"\nexec ./r4-runtime "$@"\n')
     (stage / 'Start R4.sh').chmod(0o755)
-    (stage / 'README.txt').write_text('''R4 — Linux x86-64
+    (stage / 'README.txt').write_text('''Ridge Racer Type 4 Remixed — Linux x86-64
 
 Extract this folder into a writable location and run ./r4-runtime or
 ./Start\\ R4.sh. Choose your own USA BIN/CUE disc in the game menu.

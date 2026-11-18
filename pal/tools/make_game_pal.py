@@ -8,6 +8,9 @@
 - Translation report: OUTPUT.report.txt
 
 Usage: python make_game_pal.py GAME_TOML PROBE_JSON GENERATED_USA SCES_017.06 OUTPUT [EXTRA_TOML...]
+For display-name-only changes without a PAL dump:
+  python make_game_pal.py --branding-only GAME_TOML OUTPUT
+
 The EXTRA_TOML files (NTSC patches, manual patches) are appended verbatim.
 """
 import json
@@ -42,6 +45,17 @@ def read_list(path):
 
 
 def main():
+    if len(sys.argv) == 4 and sys.argv[1] == "--branding-only":
+        # Display labels do not depend on PAL code or address translation.
+        import tomllib
+        src, output = sys.argv[2:]
+        source = tomllib.loads(open(src, encoding="utf-8").read())
+        text = open(output, encoding="utf-8").read()
+        text = re.sub(r'^name = .*$', 'name = ' + json.dumps(source["game"]["name"] + " (Europe)"), text, count=1, flags=re.M)
+        title = re.search(r'^window_title = (.*)$', open(src, encoding="utf-8").read(), re.M).group(1)
+        text = re.sub(r'^window_title = .*$', 'window_title = ' + title, text, count=1, flags=re.M)
+        open(output, "w", encoding="utf-8", newline="\n").write(text)
+        return
     if len(sys.argv) < 6:
         raise SystemExit(__doc__)
     src, probe, gen, exe, output = sys.argv[1:6]
@@ -71,7 +85,7 @@ def main():
         key = code.split("=")[0].strip() if "=" in code else ""
         # --- PAL identity
         if section == "game":
-            repl = {"name": '"R4: Ridge Racer Type 4 (Europe)"', "id": '"SCES-01706"',
+            repl = {"name": '"Ridge Racer Type 4 Remixed (Europe)"', "id": '"SCES-01706"',
                     "exe": '"disc/SCES_017.06"', "disc": f'"disc/{p["cue_name"]}"',
                     "entry_pc": f'"{p["entry_pc"]}"', "text_size": f'"{p["text_size"]}"'}
             if key in repl:

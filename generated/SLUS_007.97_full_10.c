@@ -23490,6 +23490,7 @@ block_8002F314:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x4u);
 #endif
+psx_mod_instruction(cpu, 0x8002F314u, 0x3C02800Fu);
     cpu->gpr[2] = 0x800F << 16;  /* 0x800F0000 */
     PGXP_ALU(0x3C02800Fu, cpu->gpr[2], 0u, 0u);  /* 0x8002F314: 0x3C02800F */
 #ifdef PSX_COSIM
@@ -26678,6 +26679,7 @@ block_8002F314:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x4u);
 #endif
+psx_mod_instruction(cpu, 0x8002F314u, 0x3C02800Fu);
     cpu->gpr[2] = 0x800F << 16;  /* 0x800F0000 */
     PGXP_ALU(0x3C02800Fu, cpu->gpr[2], 0u, 0u);  /* 0x8002F314: 0x3C02800F */
 #ifdef PSX_COSIM

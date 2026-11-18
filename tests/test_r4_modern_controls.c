@@ -123,6 +123,24 @@ static int run(const PSXModPadFrame *f, PSXModPadOutput *o) {
     return s_xf[0].transform(f, o);
 }
 
+static void test_frontend_confirmation(void) {
+    PSXModPadOutput o;
+    reset_mocks(); s_scheme = "modern"; s_activate();
+    set_scene(0);
+    put16(0x800F4E1Au, 1);
+    put32(0x8009EBD0u, 0x8009F100u);
+    put32(0x8009F100u, 0x8002F110u);
+    PSXModPadFrame f = frame(press(R4_MC_PAD_CROSS), PSX_MOD_PAD_DUALSHOCK,
+                            128, R4_MC_HOST_TRIGGERS, 0, 0);
+    CHECK(run(&f, &o) && o.buttons == press(R4_MC_PAD_CIRCLE), "A/Cross confirms native frontend");
+    f.buttons = press(R4_MC_PAD_CIRCLE);
+    CHECK(run(&f, &o) && o.buttons == press(R4_MC_PAD_CROSS), "B/Circle cancels native frontend");
+    f.host_flags = 0; f.type = PSX_MOD_PAD_DIGITAL;
+    f.buttons = press(R4_MC_PAD_CROSS | R4_MC_PAD_UP);
+    CHECK(run(&f, &o) && o.buttons == press(R4_MC_PAD_CIRCLE | R4_MC_PAD_UP), "keyboard preserves navigation while confirming");
+    set_scene(0);
+}
+
 static void test_activation(void) {
     CHECK(s_activate != NULL, "activation plugin registered");
     if (!s_activate) return;
@@ -367,6 +385,7 @@ static void test_live_scheme(void) {
 
 int main(void) {
     test_activation();
+    test_frontend_confirmation();
     test_live_scheme();
     test_mapping();
     if (s_failures) {

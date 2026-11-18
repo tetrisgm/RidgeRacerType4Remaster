@@ -97,7 +97,7 @@ exec bash "${PACKAGER}" \
   --artifact "${ARTIFACT_TAG}" \
   --zip-prefix r4 \
   --exe-name r4-runtime \
-  --display-name "Ridge Racer Type 4 Recompiled" \
+  --display-name "Ridge Racer Type 4 Remixed" \
   --recompiler-build "${RECOMPILER_BUILD}" \
   --version-env RELEASE_VERSION \
   --disc-hint "your own R4: Ridge Racer Type 4 (USA) disc image (Redump bin/cue, see DISC.md)" \

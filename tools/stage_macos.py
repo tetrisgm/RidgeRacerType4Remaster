@@ -34,7 +34,7 @@ def main():
         parser.error('version must be a simple folder name')
     build = args.build.resolve()
     delivery = ROOT / 'dist/macos' / args.version
-    app = delivery / 'R4.app'
+    app = delivery / 'Ridge Racer Type 4 Remixed.app'
     contents = app / 'Contents'
     stage = contents / 'Resources/runtime'
     packaged_binary = contents / 'MacOS/r4-runtime'
@@ -70,7 +70,7 @@ def main():
     (stage / 'bundle-id').write_text('net.ramine.r4recomp\n')
     (contents / 'Info.plist').write_bytes(plistlib.dumps(dict(
         CFBundleExecutable='r4-runtime', CFBundleIdentifier='net.ramine.r4recomp',
-        CFBundleName='R4 Recompiled', CFBundlePackageType='APPL',
+        CFBundleName='Ridge Racer Type 4 Remixed', CFBundleDisplayName='Ridge Racer Type 4 Remixed', CFBundlePackageType='APPL',
         CFBundleVersion=args.app_version, CFBundleShortVersionString=args.app_version,
         NSHighResolutionCapable=True, LSMinimumSystemVersion='11.0',
         LSApplicationCategoryType='public.app-category.racing-games',
@@ -144,12 +144,12 @@ enabled = true
     (stage / 'NATIVE-OVERLAYS.json').write_text(json.dumps(overlay_receipt, indent=2) + '\n')
     (stage / 'QUALIFICATION.json').write_text(json.dumps(evidence, indent=2) + '\n')
     (stage / 'MACH-O-IMPORTS.txt').write_text(imports + '\n')
-    start = delivery / 'Start R4.command'
-    start.write_text('#!/bin/zsh\ncd -- "${0:A:h}/R4.app/Contents/MacOS"\nexec ./r4-runtime "$@"\n')
+    start = delivery / 'Start Ridge Racer Type 4 Remixed.command'
+    start.write_text('#!/bin/zsh\ncd -- "${0:A:h}/Ridge Racer Type 4 Remixed.app/Contents/MacOS"\nexec ./r4-runtime "$@"\n')
     start.chmod(0o755)
-    (stage / 'README.txt').write_text('''R4 — macOS (Apple silicon)
+    (stage / 'README.txt').write_text('''Ridge Racer Type 4 Remixed — macOS (Apple silicon)
 
-Open R4.app (or Start R4.command) and choose your own USA disc. The app can live in Applications; player data is stored in
+Open Ridge Racer Type 4 Remixed.app (or Start Ridge Racer Type 4 Remixed.command) and choose your own USA disc. The app can live in Applications; player data is stored in
 ~/Library/Application Support/net.ramine.r4recomp/. No game data, retail BIOS, saves, compiler or SDK is
 included. OpenBIOS and all 7,459 native overlay variants are bundled.
 
@@ -160,7 +160,7 @@ To reuse an older portable installation, quit the game and copy its memcards
 folder and desired settings.toml/keybinds.ini/input.ini/config.ini into the
 Application Support folder above. Keep the original files as a backup.
 
-R4.app/Contents/Resources/runtime/QUALIFICATION.json contains measured results and their limits for this build;
+Ridge Racer Type 4 Remixed.app/Contents/Resources/runtime/QUALIFICATION.json contains measured results and their limits for this build;
 it is not a claim about every course, mode or Mac. Physical Steam Controller
 behavior still requires that device; synthetic input tests are identified as
 such. Signing and notarization status is recorded in DELIVERY.json beside the app.

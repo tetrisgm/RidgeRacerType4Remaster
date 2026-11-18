@@ -146,7 +146,7 @@ enabled = true
         ['git', '-C', str(ROOT), 'status', '--porcelain', '--untracked-files=no'], text=True))
     revisions['toolchain'] = args.toolchain.name
     (stage / 'BUILD.json').write_text(json.dumps(revisions, indent=2) + '\n')
-    (stage / 'README.txt').write_text('''R4 — Windows x64
+    (stage / 'README.txt').write_text('''Ridge Racer Type 4 Remixed — Windows x64
 
 Extract the whole ZIP to a writable folder and open r4-runtime.exe.
 Choose your own USA BIN/CUE disc in the game menu. No game data or retail

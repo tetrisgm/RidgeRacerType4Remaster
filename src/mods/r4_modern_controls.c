@@ -12,8 +12,9 @@
  * Triangle (Y) is the Rewind shortcut: activation lets the runtime claim the
  * title's one-button Rewind binding ([controller] direct_shortcut in
  * game.toml) as a direct shortcut, so Y never reaches the game.
- * Outside races, in the pause menu and the attract demo, on keyboards and
- * on pads without both triggers, the pad passes through unchanged. R4
+ * Native frontend menus use A/Cross to confirm and B/Circle to go back,
+ * matching the custom frontend. Driving on keyboards and pads without both
+ * triggers otherwise passes through unchanged. R4
  * re-reads the pad ID every poll and re-derives its input mode when it
  * changes, so presenting the NeGcon only while driving is safe.
  *
@@ -152,8 +153,19 @@ static void r4_mc_load_tuning(void) {
 
 static int r4_mc_transform(const PSXModPadFrame *frame, PSXModPadOutput *out) {
     R4ModernNegcon ng;
-    if (!frame || frame->player >= R4_MC_PLAYERS || !r4_mc_driving())
-        return 0;
+    if (!frame || !out || frame->player >= R4_MC_PLAYERS) return 0;
+    if (psx_mod_read_half(R4_STATE_MAJOR_ADDR) == 1u &&
+        !r4_is_race_handler(r4_mc_read_word,
+            r4_frame_handler(r4_mc_read_word, r4_mc_read_half))) {
+        // The original US frontend uses Circle=OK and Cross=Cancel. Swap
+        // only these native menu inputs; race controls and replay stay intact.
+        const uint32_t buttons = out->buttons;
+        out->buttons = (buttons & ~(R4_MC_PAD_CROSS | R4_MC_PAD_CIRCLE)) |
+                       ((buttons & R4_MC_PAD_CROSS) >> 1) |
+                       ((buttons & R4_MC_PAD_CIRCLE) << 1);
+        return 1;
+    }
+    if (!r4_mc_driving()) return 0;
     r4_mc_negcon_config(frame->player, &ng);
     return r4_modern_controls_map(frame, &ng, out);
 }

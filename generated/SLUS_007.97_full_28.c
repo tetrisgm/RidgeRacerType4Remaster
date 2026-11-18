@@ -5132,6 +5132,7 @@ block_8005E280:
 #ifdef PSX_ENABLE_BLOCK_CYCLES
     psx_cyc_step(cpu, 0x4u);
 #endif
+psx_mod_instruction(cpu, 0x8005E280u, 0x3C02800Fu);
     cpu->gpr[2] = 0x800F << 16;  /* 0x800F0000 */
     PGXP_ALU(0x3C02800Fu, cpu->gpr[2], 0u, 0u);  /* 0x8005E280: 0x3C02800F */
 #ifdef PSX_COSIM

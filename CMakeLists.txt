@@ -161,7 +161,7 @@ psxrecomp_add_game_runtime(psx-runtime
     PRELOADED_MODS_DIR "${R4_PRELOADED_MODS}"
     ENABLE_NETPLAY_IF_PRESENT
     NETPLAY_LOBBY_URL "ws://netplay.retcomm.net:8765"
-    WINDOW_TITLE "Ridge Racer Type 4 Recompiled"
+    WINDOW_TITLE "Ridge Racer Type 4 Remixed"
     EXE_NAME "r4-runtime"
     DEBUG_PORT 4797
     DEFAULT_GAME_CONFIG_PATH "game.toml"

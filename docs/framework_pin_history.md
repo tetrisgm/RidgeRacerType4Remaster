@@ -1,3 +1,14 @@
+## 2026-11-17 — 753e32df / launcher 7b77092: replay masks and frontend backgrounds
+
+Renderer keeps textured stencil masks current and splits overlapping draws to
+retain painter order. Real-GL color/depth/stencil parity covers 1x/5x/9x with
+PGXP enabled (180 checks); all 46 runtime tests pass. Launcher retains a clean
+racing backdrop during native loading, resets home state after snapshot loads,
+and uses the Remixed name. All 19 launcher tests pass. Regenerated through
+`tools/regen.sh`; title hooks enter the native menu and dismiss background demos.
+Replay and menu receipts: `analysis/replay-stutter-20261117/` and
+`analysis/home-timeattack-20261117/`.
+
 ## 2026-11-16 — d4c60bf6: native Mac player-data root
 
 Links packaged licenses into player data to retain the existing packaged-root

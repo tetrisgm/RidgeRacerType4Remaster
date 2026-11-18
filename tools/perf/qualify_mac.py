@@ -33,6 +33,8 @@ def main():
     parser.add_argument('--port', type=int, default=4799)
     parser.add_argument('--queue-frames', type=int, choices=range(1, 9))
     parser.add_argument('--visible', action='store_true')
+    parser.add_argument('--sound', action='store_true', help='use normal audio output')
+    parser.add_argument('--replay', action='store_true', help='measure a saved replay without injecting driving input')
     parser.add_argument('--native-display', action=argparse.BooleanOptionalAction, default=True,
                         help='inherit actual display timing; --no-native-display simulates 60 Hz')
     parser.add_argument('--borderless', action='store_true')
@@ -106,6 +108,8 @@ frame_generation = false
     env.update(SDL_AUDIODRIVER='dummy', R4L_BOOT_MENU_DONE='1',
                PSX_DEBUG_SERVER='1', PSX_VSYNC='0', PSX_DYNRES='0',
                PSX_HOST_REFRESH_HZ='60', PSX_HOST_REFRESH_MAX_HZ='60')
+    if args.sound:
+        env.pop('SDL_AUDIODRIVER', None)
     if args.borderless:
         settings = stage / 'settings.toml'
         settings.write_text(settings.read_text().replace('fullscreen = 0', 'fullscreen = 1'))
@@ -173,22 +177,29 @@ frame_generation = false
         try:
             wait(lambda: call('frame')['frame'] > 15)
             call('turbo', enabled=0)
+            load_started = time.monotonic()
+            load_present_before = call('gl_present_ring', n=1)
             generation = call('savestate_status')['generation']
             call('savestate', op='load', slot=0)
             wait(lambda: call('savestate_status')['generation'] != generation)
             loaded = call('savestate_status')
             assert loaded['last_op'] == 'load' and loaded['last_ok'], loaded
+            load_completed = time.monotonic()
+            (stage / 'load-timing.json').write_text(json.dumps(dict(load_seconds=load_completed-load_started, before=load_present_before, after=call('gl_present_ring', n=256)), indent=2))
             time.sleep(1)
             call('display_aspect', num=16, den=9)
             if args.capture_rewind:
                 call('window_size', w=3840, h=2160)
             origin = camera()
-            call('set_input', buttons='0xBFFF')
+            if not args.replay:
+                call('set_input', buttons='0xBFFF')
             wait(lambda: sum(abs(a-b) for a, b in zip(camera(), origin)) > 1024)
-            driver = subprocess.Popen([sys.executable, '-u', str(ROOT / 'tools/perf/autopilot.py'),
-                                       str(args.seconds + 60)], env=dict(env, R4_DEBUG_PORT=str(args.port)),
-                                      stdout=driver_log, stderr=subprocess.STDOUT)
+            if not args.replay:
+                driver = subprocess.Popen([sys.executable, '-u', str(ROOT / 'tools/perf/autopilot.py'),
+                                           str(args.seconds + 60)], env=dict(env, R4_DEBUG_PORT=str(args.port)),
+                                          stdout=driver_log, stderr=subprocess.STDOUT)
             time.sleep(3)
+            (stage / 'startup-present.json').write_text(json.dumps(call('gl_present_ring', n=4096), indent=2))
             video = call('video_info')
             assert video['dynamic'] == 0 and video['internal_lines'] == 2160, video
             pgxp = call('pgxp')
@@ -199,7 +210,7 @@ frame_generation = false
             samples = []
             for _ in range(args.seconds // 5):
                 time.sleep(5)
-                if driver.poll() is not None:
+                if driver is not None and driver.poll() is not None:
                     raise RuntimeError(f'Driver exited before measurement completed (exit {driver.returncode}, runtime {runtime.poll()})')
                 samples.append(dict(camera=camera(), frame=call('frame'),
                                     perf=call('perf', window_ms=5000)))

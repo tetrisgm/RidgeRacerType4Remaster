@@ -5,6 +5,10 @@ races: RT is gas (I), LT is brake (II), the left stick is twist. This page
 covers how the triggers and stick are shaped before they reach R4, and the
 hidden tuning options.
 
+Native frontend menus use A/Cross to confirm and B/Circle to cancel in Modern
+mode, matching the custom menu. Classic retains the original button mapping.
+The original artwork still depicts its original Circle/Cross prompts.
+
 ## Why the curves are needed
 
 R4's own NeGcon handling was measured from a race savestate (headless debug

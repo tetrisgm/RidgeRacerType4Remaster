@@ -32,6 +32,18 @@ Menu code never invokes guest code from the render thread.
   Its acknowledgement lives with player preferences, not in the app. Later
   launches skip onboarding; How to play can reopen the explanation.
 
+## Background demonstrations
+
+The home menu remains active while native demonstrations cycle behind it.
+The native idle wait is removed; original loading and cleanup still execute.
+Only established racing frames may replace the retained full-window backdrop;
+loading/title cards and demo-exit fades remain covered. Menu choices queue on
+the guest thread and stay covered until the destination leaves the shared
+loading handlers. Confirm clears the accelerated idle timer before the native
+handler tests its timeout, even if the requested cursor is already selected.
+Modern native frontend controls use A/Cross to confirm and B/Circle to cancel;
+Classic mapping and driving controls are unchanged.
+
 ## Verification
 
 - `analysis/menu-finish-20261117-final/`: sound-enabled Mac boot/race smoke,

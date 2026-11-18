@@ -7,7 +7,7 @@
 # dump (see DISC.md) and reviewed by hand.
 
 [game]
-name = "R4: Ridge Racer Type 4 (Europe)"
+name = "Ridge Racer Type 4 Remixed (Europe)"
 id = "SCES-01706"
 # VS Battle is the 2-player horizontal split screen on pads 1 + 2. players = 4
 # is the netplay seat ceiling for the online Link Battle (2-4 players, one car
@@ -104,7 +104,7 @@ mod_function_entry_funcs = [
 
 [runtime]
 debug_port = 4797
-window_title = "Ridge Racer Type 4 Recompiled"
+window_title = "Ridge Racer Type 4 Remixed"
 memcard_dir = "saves"
 # Hidden mod features are runtime rules, never launcher choices: the
 # r4.modern-controls split-screen-rewind rule (no Rewind in 2P VS Battle).

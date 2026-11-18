@@ -1,4 +1,4 @@
-# Ridge Racer Type 4 Remaster
+# Ridge Racer Type 4 Remixed
 
 R4: Ridge Racer Type 4 (USA, **SLUS-00797**), statically recompiled to a
 native runtime using [psxrecomp](https://github.com/RetroPortingToolKit/psxrecomp)

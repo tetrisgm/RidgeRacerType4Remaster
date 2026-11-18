@@ -110,6 +110,16 @@ def main():
             # the race's time limit or reopening its native pause menu.
             if (label.startswith('gp-') or label.startswith('pre-')) and active_race(port):
                 continue
+            if label == "gp-select":
+                # Automated runs skip the boot frontend. Reopen the home
+                # overlay explicitly now that attract starts without an idle
+                # delay, then choose GP through the same UI as the player.
+                if not cmd({"cmd": "menu_host"}, port=port).get("open"):
+                    cmd({"cmd": "host_button", "name": "back"}, port=port)
+                wait_frames(2, port)
+                cmd({"cmd": "window_size", "w": 1280, "h": 720}, port=port)
+                cmd({"cmd": "host_mouse", "x": 180, "y": 163}, port=port)
+                buttons = None
             if buttons:
                 cmd({"cmd": "set_input", "buttons": "0x%04X" % mask(buttons)}, port=port)
                 wait_frames(int(hold * 60), port)
@@ -120,6 +130,11 @@ def main():
                 engage_widescreen(port)
             path = os.path.join(out, f"{i:02d}_{label}.png")
             shot = cmd({"cmd": "screenshot", "path": path}, port=port)
+            for _ in range(120):
+                if shot.get("ok") or shot.get("error") != "display disabled":
+                    break
+                wait_frames(2, port)
+                shot = cmd({"cmd": "screenshot", "path": path}, port=port)
             with open(path + ".json", "w", encoding="utf8") as receipt:
                 json.dump(shot, receipt, indent=2)
             if not shot.get("ok") or not os.path.isfile(path):

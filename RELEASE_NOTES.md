@@ -1,4 +1,4 @@
-# Ridge Racer Type 4 Remaster — v0.2.3 release preparation
+# Ridge Racer Type 4 Remixed — v0.2.3 release preparation
 
 The new main and race menus keep Restart/Retire, controls, settings and snapshots
 in one flow. Back returns to the parent page, disc selection stays inside the
@@ -30,7 +30,7 @@ muted. See `docs/HANDOFF.md` for current artifacts and remaining checks.
 
 ---
 
-# Ridge Racer Type 4 Recompiled — v0.2.2
+# Ridge Racer Type 4 Remixed — v0.2.2
 
 Rewind release now restores the rendering work already issued at the selected
 state, eliminating the extra pipeline rebuild. Two full-resolution working
@@ -62,7 +62,7 @@ receipts for the measured scope.
 
 ---
 
-# Ridge Racer Type 4 Recompiled — v0.2.1
+# Ridge Racer Type 4 Remixed — v0.2.1
 
 The custom menu is integrated into the game, with full-resolution hold-to-rewind
 and the MStan performance and Steam Controller fixes retained.
@@ -124,7 +124,7 @@ remain outside this release's tested route.
 
 ---
 
-# Ridge Racer Type 4 Recompiled — v0.2.0
+# Ridge Racer Type 4 Remixed — v0.2.0
 
 ## The download is now the compiled game
 
@@ -234,7 +234,7 @@ of its disc data. Every third-party notice is in `THIRD-PARTY-LICENSES/` and
 
 ---
 
-# Ridge Racer Type 4 Recompiled — v0.1.0 (preview)
+# Ridge Racer Type 4 Remixed — v0.1.0 (preview)
 
 R4: Ridge Racer Type 4 (USA) statically recompiled to native code with
 psxrecomp. **This download is a setup kit, not a playable game**: it contains
