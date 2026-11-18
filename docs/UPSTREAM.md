@@ -1,6 +1,6 @@
 # Upstream fixes
 
-R4 pins fork master `d81b3919`. The table tracks the earlier isolated upstream
+R4 pins fork master `7614acb5`. The table tracks isolated upstream
 fixes; subsequent integration and rewind work is recorded in
 [pin history](framework_pin_history.md).
 The fork has one R4 development line, master. PR heads are isolated review
@@ -8,6 +8,7 @@ artifacts; the frozen performance baseline is not replaced by old topic heads.
 
 | Fix | Upstream PR | Original commit |
 |---|---|---|
+| Discard old menu exit requests after provider teardown (draft; integrated lobby retest pending) | [#967](https://github.com/RetroPortingToolKit/psxrecomp/pull/967) | `7614acb5` → review `03af1d14` |
 | HD upload residency across rewind | [#860](https://github.com/RetroPortingToolKit/psxrecomp/pull/860) | `b9dcf919` |
 | HD replacement coverage over transparent native texels | [#861](https://github.com/RetroPortingToolKit/psxrecomp/pull/861) | `3a0502c5` |
 | XA music alone is not a rewind movie | [#862](https://github.com/RetroPortingToolKit/psxrecomp/pull/862) | `006fb5bb` |
@@ -22,7 +23,10 @@ artifacts; the frozen performance baseline is not replaced by old topic heads.
 | Opt-in continuous threaded debug readback | [#879](https://github.com/RetroPortingToolKit/psxrecomp/pull/879) | `c7b69a3d` |
 | Scissored hardware PGXP depth clears | [#880](https://github.com/RetroPortingToolKit/psxrecomp/pull/880) | `7f71774f`, test registration `9fbb6ba8` |
 
-Each PR isolates one fix over `c1f5cafd`. #867 now includes the complete custom
+The earlier PRs isolate one fix over `c1f5cafd`; #967 is isolated over current
+upstream master and remains draft. Its integration and Windows execution limits
+are recorded in the [direct-IP audit](recovery/DIRECT_IP_AUDIT_20261117.md).
+#867 now includes the complete custom
 menu host adapter; its review version omits #866’s independent adopted-pad
 policy, while the qualified integration contains both. Review heads are not
 separately runtime-qualified. Current Mac integration validation includes

@@ -66,6 +66,9 @@ guest execution, protocol, controls or renderer behavior. **It is a candidate
 correction for the observed symptom; the repaired integrated transition still
 needs an end-to-end retest.** The passing direct-start run exercises the new Mac
 binary but does not establish this fix. Do not claim Windows menu-start is fixed.
+Isolated upstream review: [draft PR #967](https://github.com/RetroPortingToolKit/psxrecomp/pull/967),
+review commit `03af1d145d20b9b4e4023ec43a7af000524de597`. The integration remains
+on fork master; the review branch is not separately runtime-qualified.
 
 ## Windows application-control blocker
 
