@@ -138,6 +138,13 @@ static void test_frontend_confirmation(void) {
     f.host_flags = 0; f.type = PSX_MOD_PAD_DIGITAL;
     f.buttons = press(R4_MC_PAD_CROSS | R4_MC_PAD_UP);
     CHECK(run(&f, &o) && o.buttons == press(R4_MC_PAD_CIRCLE | R4_MC_PAD_UP), "keyboard preserves navigation while confirming");
+    for (unsigned major = 0; major <= 4; ++major) {
+        put16(0x800F4E1Au, major);
+        put32(0x8009EBCCu + 4 * major, 0x8009F100u);
+        put32(0x8009F100u, major == 0 ? 0x8001E388u : 0x80030000u);
+        CHECK(run(&f, &o) && o.buttons == press(R4_MC_PAD_CIRCLE | R4_MC_PAD_UP),
+              "modern confirm covers every non-racing frontend row");
+    }
     set_scene(0);
 }
 

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """smoke.py - scripted boot-to-race check against a running debug build.
 
-Drives pad 1 over the debug server with frontend turbo on (unthrottled), so a
-boot-to-race run takes seconds of wall clock: skips the intro, opens Grand
-Prix, confirms through the pre-race screens, then holds accelerate. All timing
+Drives a virtual modern controller through the real host input path. It
+skips the intro, opens Grand Prix, confirms through the pre-race screens, then holds accelerate. All timing
 is in guest frames. Writes a numbered PNG per step into OUT_DIR and prints
 frame, dispatch-miss and segment-miss counters, so a run can be judged from
 the images and the numbers alone.
@@ -17,10 +16,9 @@ import sys
 import time
 
 from dbg import DEFAULT_PORT, cmd
-from pad import mask
 
 # (label, buttons held, hold secs, settle secs) -- secs are guest time
-# (x60 frames). R4 menus use Circle = OK.
+# (x60 frames). Menu Circle below denotes Confirm (modern A/Cross).
 # The Namco logo is unskippable; Start skips the intro movie once it runs
 # (START_FRAME), then opens the menu, then picks Grand Prix.
 START_FRAME = 1800
@@ -55,27 +53,6 @@ def wait_frames(n, port):
         time.sleep(0.02)
 
 
-def engage_widescreen(port):
-    """Let frames present on a 2D screen, then resume turbo.
-
-    TCP turbo skips the whole present path, and psxrecomp engages a wide
-    display aspect (the widescreen mod) in that path, on the first frame it
-    presents after game entry (never during an FMV, and not while the
-    post-FMV present hold is still draining). Turbo switched on during boot
-    would otherwise keep the whole run 4:3. Waits until native-wide engages,
-    or at most 60 frames when no wide aspect is configured.
-    """
-    cmd({"cmd": "turbo", "enabled": 0}, port=port)
-    mode = 0
-    for _ in range(60):
-        wait_frames(1, port)
-        mode = cmd({"cmd": "ws_nw"}, port=port).get("mode")
-        if mode == 2:
-            break
-    cmd({"cmd": "turbo", "enabled": 1}, port=port)
-    print(f"   widescreen mode={mode} (0 off, 2 native-wide)")
-
-
 def active_race(port):
     def read(addr, size=4):
         return int.from_bytes(bytes.fromhex(cmd({'cmd': 'read_ram',
@@ -94,13 +71,14 @@ def main():
     deadline = time.time() + 60
     while True:
         try:
-            cmd({"cmd": "turbo", "enabled": 1}, port=port, timeout=2)
+            cmd({"cmd": "turbo", "enabled": 0}, port=port, timeout=2)
             break
         except OSError:
             if time.time() > deadline:
                 print("debug server not reachable (build with -DPSX_DEBUG_TOOLS=ON)")
                 return 1
             time.sleep(0.5)
+    cmd({"cmd": "virtual_pad", "player": 1, "connected": 1, "select": 1}, port=port)
     wait_frames(max(0, START_FRAME - cmd({"cmd": "frame"}, port=port).get("frame", 0)), port)
     try:
         for i, (label, buttons, hold, settle) in enumerate(STEPS):
@@ -120,14 +98,18 @@ def main():
                 cmd({"cmd": "window_size", "w": 1280, "h": 720}, port=port)
                 cmd({"cmd": "host_mouse", "x": 180, "y": 163}, port=port)
                 buttons = None
+            if label.startswith("race") and not active_race(port):
+                raise RuntimeError("boot sequence did not reach a playable race")
             if buttons:
-                cmd({"cmd": "set_input", "buttons": "0x%04X" % mask(buttons)}, port=port)
+                cmd({"cmd": "virtual_pad", "player": 1,
+                     "buttons": (1 if "circle" in buttons else 0) |
+                                (64 if "start" in buttons else 0),
+                     "rt": 32767 if "cross" in buttons else 0,
+                     "lx": -26000 if "left" in buttons else 0}, port=port)
                 wait_frames(int(hold * 60), port)
                 if not label.startswith("race"):
-                    cmd({"cmd": "clear_input"}, port=port)
+                    cmd({"cmd": "virtual_pad", "player": 1}, port=port)
             wait_frames(int(settle * 60), port)
-            if label == "menu":
-                engage_widescreen(port)
             path = os.path.join(out, f"{i:02d}_{label}.png")
             shot = cmd({"cmd": "screenshot", "path": path}, port=port)
             for _ in range(120):
@@ -143,8 +125,13 @@ def main():
             d = cmd({"cmd": "dispatch_stats"}, port=port)
             print(f"{i:02d} {label:<11} frame={frame} "
                   f"miss_total={d.get('miss_total')} miss_unique={d.get('miss_unique')} "
-                  f"seg_miss={d.get('segment_miss_total')}")
+                  f"seg_miss={d.get('segment_miss_total')}", flush=True)
+            if d.get("miss_total") or d.get("segment_miss_total"):
+                raise RuntimeError(f"dispatch misses at {label}: {d}")
+        if not active_race(port):
+            raise RuntimeError("smoke did not finish in active gameplay")
     finally:
+        cmd({"cmd": "virtual_pad", "player": 1, "connected": 0}, port=port)
         cmd({"cmd": "clear_input"}, port=port)
         cmd({"cmd": "turbo", "enabled": 0}, port=port)
     return 0

@@ -154,11 +154,11 @@ static void r4_mc_load_tuning(void) {
 static int r4_mc_transform(const PSXModPadFrame *frame, PSXModPadOutput *out) {
     R4ModernNegcon ng;
     if (!frame || !out || frame->player >= R4_MC_PLAYERS) return 0;
-    if (psx_mod_read_half(R4_STATE_MAJOR_ADDR) == 1u &&
-        !r4_is_race_handler(r4_mc_read_word,
-            r4_frame_handler(r4_mc_read_word, r4_mc_read_half))) {
+    const uint32_t handler = r4_frame_handler(r4_mc_read_word, r4_mc_read_half);
+    if (handler && !r4_is_race_handler(r4_mc_read_word, handler)) {
         // The original US frontend uses Circle=OK and Cross=Cancel. Swap
-        // only these native menu inputs; race controls and replay stay intact.
+        // all native frontend rows, including the decal editor and Game Over.
+        // Race handlers (including replay) retain their driving mappings.
         const uint32_t buttons = out->buttons;
         out->buttons = (buttons & ~(R4_MC_PAD_CROSS | R4_MC_PAD_CIRCLE)) |
                        ((buttons & R4_MC_PAD_CROSS) >> 1) |
