@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 root=Path(__file__).resolve().parents[2];sys.path.insert(0,str(root/'tools'))
 from dbg import cmd
-from smoke import STEPS,START_FRAME,wait_frames,engage_widescreen
+from smoke import STEPS,START_FRAME,wait_frames  # widescreen is on by default
 from pad import mask
 parser=argparse.ArgumentParser(description='Create an isolated, current-build GP grid checkpoint without showing the intro.')
 parser.add_argument('output',type=Path)
@@ -33,7 +33,6 @@ with (stage/'runtime.log').open('w') as log:
    if label.startswith('race'):break
    if buttons:c(cmd='set_input',buttons=hex(mask(buttons)));wait_frames(int(hold*60),port);c(cmd='clear_input')
    wait_frames(int(settle*60),port)
-   if label=='menu':engage_widescreen(port)
   c(cmd='turbo',enabled=0);c(cmd='savestate',op='save',slot=0)
   for _ in range(100):
    s=c(cmd='savestate_status')
