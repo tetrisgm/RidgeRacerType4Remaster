@@ -667,3 +667,4 @@ Launcher `725de56` makes first-run Start visibly selected and routes the help
 Back button through the same parent navigation as keyboard/controller Back.
 Actual Mac bundle checks cover help from both Main and Options, and the full
 launcher suite passes.
+| 2026-11-19 | `554a09ee` (fork master: `[video] pgxp_depth_tolerance`) | `f41601c` (r4/main: home highlight kept on Back, no LB/RB hint on How to play) | — | — | R4 sets `pgxp_depth_tolerance = 0.5`: at the 2% default, wall-top faces R4 hides by draw order won the depth test and showed as dark wedges on walls (GL only; software renderer clean). The tunnel's overhead sign stays occluded (paired-position autopilot lap, default vs depth-off vs 0.5). Regen: audit hash only. Verified on macOS arm64 (M4): Release build, CTest 50/50 after regen, `video_enhancement_settings_test`, hidden-window `tools/smoke.py` to a race with 0 dispatch and 0 segment misses. |

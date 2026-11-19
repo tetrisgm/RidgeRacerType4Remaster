@@ -242,6 +242,12 @@ pgxp_preserve_projection = true  # exact projection: no residual wobble on near 
 # colour correction across PGXP-moved vertices, and "fine" seam closing
 # between neighbouring polygons.
 pgxp_depth_buffer = true
+# R4 hides wall-top faces by drawing the wall front after them; at the 2%
+# default those nearer faces win the depth test and show as dark wedges on
+# walls. Half the distance keeps painter order for them while far scenery
+# (the tunnel's overhead sign) stays behind near walls (psxrecomp
+# docs/ENHANCEMENTS.md "Draw-order-hidden faces").
+pgxp_depth_tolerance = 0.5
 pgxp_color_correction = true
 pgxp_seam = "fine"
 # Ultra's visual features (psxrecomp #584, #585, #588, #589): emulated
