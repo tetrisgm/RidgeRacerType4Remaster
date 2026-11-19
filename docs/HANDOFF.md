@@ -56,6 +56,16 @@ Untouched:
 - Smart App Control;
 - the NAS.
 
+## Menu, back-out and split-screen check (2026-11-19)
+
+- Fixed in `5c99fc3c`:
+  - GL-only dark wedges on walls: R4 sets the new `pgxp_depth_tolerance = 0.5` (psxrecomp `554a09ee`); the tunnel sign stays occluded;
+  - home highlight kept on Back, and no LB/RB hint on How to play (launcher `f41601c`).
+- Mac: every pause-menu page, Options page and graphics row opened, closed and replayed with the race scene unchanged; Time Attack, Garage, Decal edit and the result screen all go in and back out; 600 consecutive frames of 2-player and 4-player split screen with no blinking.
+- STEAMBOX at 4x: no wedge; every pause-menu and Options path replayed clean; 2-player VS starts and renders. The PC split-screen frame capture mostly caught the pre-race fade, so long-run PC split-screen blinking rests on the Mac result.
+- Not covered: Career saves and Load State from the home menu, Grand Prix past its first screen, 3 players.
+- PC cleanup: task, ASR exclusion and the game process removed; `C:\Users\Public\R4Check20261119\r4-runtime.exe` is delete-pending and clears when its last handle closes or on restart.
+
 ## Open
 
 - **Root `game.toml`:** the uncommitted `multitap_analog = true` line (12:44, author unknown) is still uncommitted and preserved.
