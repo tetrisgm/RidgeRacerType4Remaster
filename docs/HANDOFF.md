@@ -16,7 +16,7 @@
   - The NVIDIA OpenGL driver reports a failed system-memory commit as "out of memory".
   - Its 12:54 events fit that pressure. So does a Volsnap "shadow copy storage could not grow" error at 12:38.
   - This is inferred: commit was not sampled at 12:54. Windows Error Reporting has no r4-runtime crash record.
-- **Owner decision:** whether to cap or stop WSL on STEAMBOX (for example, a `.wslconfig` memory limit). It was not changed, because the console PC is the owner's.
+- **Decision (delegated by the owner, 2026-11-18): leave WSL as is.** The cause is unproven, and a cap could break whatever WSL runs on the console. If the out-of-memory error returns, sample system commit at the time of the crash before changing anything.
 
 ## Final NetPlay check (muted, Mac host ↔ STEAMBOX guest, direct IP, rollback, 4× on the PC)
 
@@ -59,6 +59,6 @@ Untouched:
 ## Open
 
 - **Root `game.toml`:** the uncommitted `multitap_analog = true` line (12:44, author unknown) is still uncommitted and preserved.
-- **Release:** none published. A release needs the owner's go, ideally after the WSL decision and an integrated-lobby NetPlay pass.
+- **Release:** none published. A release needs the owner's go, ideally after an integrated-lobby NetPlay pass.
 
 Procedures: `docs/WINDOWS_BUILD.md`, `tools/r4_online_battle_regression.py`. The `--remote-seat` option has the PC peer started by the operator.
