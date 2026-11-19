@@ -7,9 +7,9 @@ Release qualification is in progress.
 
 ## Current status
 
-Version 0.2.3 is being prepared for Windows x64, Linux x64 and macOS Apple
-silicon. See [release notes](RELEASE_NOTES.md) and
-[current qualification status](docs/HANDOFF.md) before publishing a build.
+Version 0.2.4 is released for Windows x64 and macOS Apple silicon. See
+[release notes](RELEASE_NOTES.md) and
+[qualification status](docs/HANDOFF.md).
 
 The custom R4 menu replaces the main menu and supported offline race pause.
 **Start**, **Select/Back** or Esc opens it during a race.

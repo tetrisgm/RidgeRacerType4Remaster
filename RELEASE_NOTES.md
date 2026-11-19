@@ -1,3 +1,32 @@
+# Ridge Racer Type 4 Remixed — v0.2.4
+
+First public build since v0.2.0. It collects the 0.2.1–0.2.3 work: the
+integrated Select/Back menu (controls, settings, save states, rewind,
+Restart/Retire), offline two-to-four-player split screen, direct-IP NetPlay
+with rollback, the Modern race HUD and HD HUD textures, PGXP, 60-FPS GP
+enhancement and widescreen.
+
+New since 0.2.3:
+
+- Fixed dark wedges on track walls with the PGXP depth buffer in the OpenGL
+  renderer (psxrecomp `pgxp_depth_tolerance`); overhead tunnel signs stay
+  correctly hidden.
+- The home menu keeps its highlight after Back, and How to play no longer
+  shows a page-switch hint.
+
+Checked: every pause-menu and Options page and Time Attack, Garage, Decal edit
+and result screens open and back out without changing the race scene (Mac and
+Windows 4×); 600 consecutive frames of two- and four-player split screen
+without blinking; 11 minutes of Mac↔Windows rollback NetPlay with zero
+desyncs. Not yet covered: Career saves, Grand Prix past its first screen,
+three-player split screen, and audio listening tests.
+
+macOS Apple silicon is Developer-ID signed and notarized. Windows x64 is
+portable and unsigned. No disc data, retail BIOS or player saves are bundled;
+supply your own USA disc image (see `DISC.md`). OpenBIOS is included.
+
+---
+
 # Ridge Racer Type 4 Remixed — v0.2.3 release preparation
 
 The new main and race menus keep Restart/Retire, controls, settings and snapshots
