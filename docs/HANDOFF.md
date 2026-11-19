@@ -69,6 +69,9 @@ Untouched:
 ## Open
 
 - **Root `game.toml`:** the uncommitted `multitap_analog = true` line (12:44, author unknown) is still uncommitted and preserved.
-- **Release:** none published. A release needs the owner's go, ideally after an integrated-lobby NetPlay pass.
+- **Release v0.2.4 published 2026-11-19** (owner's go): https://github.com/tetrisgm/RidgeRacerType4Remaster/releases/tag/v0.2.4, tag on `7f1f18e4`. Assets: macOS arm64 (Developer-ID signed, notarized `a8dc630a`, stapled) and Windows x64 (portable, unsigned); packages in `dist/releases/0.2.4/`.
+  - Mac receipt: hidden-window race + rewind on a locked screen, VSync off, 42 VBlanks/s; visible 60 Hz timing was not re-measured for this build.
+  - Windows 0.2.4 exe was built and checksum-verified but not executed; the code matches the STEAMBOX 4x menu checks.
+  - No Linux package this time. Still untested: integrated-lobby NetPlay, audio listening.
 
 Procedures: `docs/WINDOWS_BUILD.md`, `tools/r4_online_battle_regression.py`. The `--remote-seat` option has the PC peer started by the operator.
